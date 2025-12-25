@@ -1,0 +1,12 @@
+    .venv/
+__pycache__/
+instance/
+*.pyc
+migrations/versions
+# Runtime caches
+.cache/
+**/.cache/
+fastf1_cache/
+*.db
+*.db-shm
+*.db-wal

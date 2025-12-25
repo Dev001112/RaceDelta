@@ -1,0 +1,30 @@
+{
+  "teams": [
+    { "name": "Red Bull Racing", "country": "Netherlands", "logo": "" },
+    { "name": "Mercedes", "country": "UK", "logo": "" }
+  ],
+  "drivers": [
+    {
+      "name": "Max Verstappen",
+      "code": "VER",
+      "team": "Red Bull Racing",
+      "nationality": "Netherlands",
+      "photo": ""
+    },
+    {
+      "name": "Lewis Hamilton",
+      "code": "HAM",
+      "team": "Mercedes",
+      "nationality": "UK",
+      "photo": ""
+    }
+  ],
+  "races": [
+    {
+      "season": 2025,
+      "round": 1,
+      "title": "2025 Abu Dhabi GP",
+      "location": "Yas Marina"
+    }
+  ]
+}
