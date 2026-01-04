@@ -1,0 +1,64 @@
+# ================================
+# Logs
+# ================================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ================================
+# Frontend (Node / Vite / Next)
+# ================================
+node_modules/
+dist/
+dist-ssr/
+.next/
+.cache/
+*.local
+
+# Env files
+.env
+.env.local
+.env.*.local
+
+# ================================
+# Editor / OS files
+# ================================
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ================================
+# Backend (Python)
+# ================================
+.venv/
+venv/
+__pycache__/
+*.pyc
+instance/
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+
+# Migrations cache only (keep migrations!)
+migrations/versions/
+
+# ================================
+# Runtime / Data caches
+# ================================
+.cache/
+**/.cache/
+fastf1_cache/
+*.pickle
