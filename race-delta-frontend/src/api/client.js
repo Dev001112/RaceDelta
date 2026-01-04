@@ -1,7 +1,8 @@
 // src/api/client.js
 // Single source of truth for RaceDelta frontend API access
 
-const base = "http://127.0.0.1:8000";
+// Get API base URL from environment variable or default to localhost
+const base = import.meta.env.VITE_API_BASE || "http://127.0.0.1:8000";
 
 /* --------------------------------------------------
    INTERNAL HELPERS

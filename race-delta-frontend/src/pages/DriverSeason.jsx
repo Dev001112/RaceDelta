@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { fetchDriverSeason } from "../lib/api";
+import { fetchDriverSeason } from "../api/client";
 
 import DriverHeader from "../components/DriverHeader";
 import RadarComparison from "../components/RadarComparison";

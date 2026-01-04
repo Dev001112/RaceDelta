@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { fetchTeamDetail } from "../lib/api";
+import { fetchTeamDetail } from "../api/client";
 import { TEAM_LOGOS } from "../lib/teamLogos";
 
 export default function TeamDetail() {

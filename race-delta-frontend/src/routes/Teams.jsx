@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { fetchTeams } from "../lib/api";
+import { fetchTeams } from "../api/client";
 import TeamCard from "../components/TeamCard";
 
 export default function Teams() {

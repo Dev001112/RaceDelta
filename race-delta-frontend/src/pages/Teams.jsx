@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import TeamCard from "../components/TeamCard";
-import { fetchTeams } from "../lib/api";
+import { fetchTeams } from "../api/client";
 
 export default function Teams() {
   const [teams, setTeams] = useState([]);

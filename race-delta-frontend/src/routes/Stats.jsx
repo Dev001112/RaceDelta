@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   fetchDriverStandings,
   fetchConstructorStandings,
-} from "../lib/api";
+} from "../api/client";
 
 /* ---------------- TEAM LOGOS ---------------- */
 const TEAM_LOGOS = {

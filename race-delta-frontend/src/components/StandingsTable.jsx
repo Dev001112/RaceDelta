@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fetchDriverStandings } from "../lib/api";
+import { fetchDriverStandings } from "../api/client";
 
 export default function StandingsTable() {
   const [standings, setStandings] = useState([]);

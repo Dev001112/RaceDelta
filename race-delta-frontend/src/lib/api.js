@@ -91,8 +91,10 @@ export async function fetchDriverSeason(driverCode, season) {
 // export async function fetchL3LapAnalytics(...) {}
 
 export async function fetchDriverComparison({ driver1, driver2, season }) {
+  const API_BASE = import.meta.env.VITE_API_BASE || "http://127.0.0.1:8000";
+  const apiUrl = API_BASE.endsWith('/api') ? API_BASE : `${API_BASE}/api`;
   const res = await fetch(
-    `http://127.0.0.1:8000/api/compare/drivers?driver1=${driver1}&driver2=${driver2}&season=${season}`
+    `${apiUrl}/compare/drivers?driver1=${driver1}&driver2=${driver2}&season=${season}`
   );
 
   if (!res.ok) {

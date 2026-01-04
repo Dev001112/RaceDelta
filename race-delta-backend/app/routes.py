@@ -1,27 +1,26 @@
 # app/routes.py
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app
+from datetime import datetime
 import requests
 from fastf1.ergast import Ergast
+
 from scripts.team_meta import TEAM_META
-from app.services.l1_season_fastf1 import get_driver_season_metrics
-import requests
-from datetime import datetime
-from app.services.radar_normalization import normalize_radar
-from flask import Blueprint
-from scripts.driver_comparison_timeline import (
-    build_driver_comparison_timeline
+from scripts.driver_comparison_timeline import build_driver_comparison_timeline
+from scripts.ergast_teams import get_current_f1_teams
+from scripts.ergast_standings import (
+    get_current_driver_standings,
+    get_current_constructor_standings,
 )
-from app.services.f1_service import get_current_season_drivers
+
+from app.services.f1_service import get_current_season_drivers, normalize_team
 from app.services.driver_comparison_fastf1 import compare_drivers_season
-
-
 from app.services.l1_season_fastf1 import (
     get_driver_season_metrics,
     get_teammate_code
 )
 from app.services.radar_normalization import normalize_radar
-
+from app.services.season_aggregator import build_l1_season
 
 # ==================================================
 # BLUEPRINT
@@ -34,51 +33,14 @@ api_bp = Blueprint("api", __name__)
 # ==================================================
 
 ergast = Ergast()
-OPENF1_BASE = "https://api.openf1.org/v1"
-
-TEAM_ID_TO_NAME = {
-    "mercedes": "Mercedes",
-    "ferrari": "Ferrari",
-    "red_bull": "Red Bull",
-    "mclaren": "McLaren",
-    "aston_martin": "Aston Martin",
-    "alpine": "Alpine",
-    "williams": "Williams",
-    "haas": "Haas",
-    "rb": "RB",
-    "sauber": "Sauber"
-}
-
-# ==================================================
-# IMPORT EXTERNAL LOGIC (KEEP SEPARATE)
-# ==================================================
-
-from scripts.ergast_teams import get_current_f1_teams
-from scripts.ergast_standings import (
-    get_current_driver_standings,
-    get_current_constructor_standings,
-)
-from scripts.team_meta import TEAM_META
-
-# L1 Season Analytics service
-from app.services.season_aggregator import build_l1_season
 
 # ==================================================
 # HELPERS
 # ==================================================
 
-def normalize_team(name: str) -> str:
-    if not name:
-        return ""
-    return (
-        name.lower()
-        .replace("racing", "")
-        .replace("formula one team", "")
-        .replace("f1 team", "")
-        .replace("-", " ")
-        .replace("_", " ")
-        .strip()
-    )
+def get_openf1_base():
+    """Get OpenF1 API base URL from Flask config"""
+    return current_app.config.get("OPENF1_BASE", "https://api.openf1.org/v1")
 
 # ==================================================
 # DRIVERS LIST (OpenF1)
@@ -140,7 +102,9 @@ def team_detail(constructor_id):
 
         # ---- OpenF1 headshots (single request)
         try:
-            openf1_resp = requests.get(f"{OPENF1_BASE}/drivers", timeout=10)
+            openf1_base = get_openf1_base()
+            timeout = current_app.config.get("OPENF1_TIMEOUT", 10)
+            openf1_resp = requests.get(f"{openf1_base}/drivers", timeout=timeout)
             openf1_data = openf1_resp.json()
             headshot_map = {
                 d.get("name_acronym"): d.get("headshot_url")
@@ -200,8 +164,9 @@ def team_detail(constructor_id):
         })
 
     except Exception as e:
-        print("Team detail error:", e)
-        return jsonify({"error": "Internal server error"}), 500
+        logger = current_app.logger
+        logger.error(f"Team detail error: {e}", exc_info=True)
+        return jsonify({"error": "Internal server error", "message": str(e)}), 500
 
 # ==================================================
 # L1 – SEASON ANALYTICS (FASTF1)
@@ -226,7 +191,9 @@ def l1_season():
     }
 
     try:
-        resp = requests.get("https://api.openf1.org/v1/drivers", timeout=10)
+        openf1_base = get_openf1_base()
+        timeout = current_app.config.get("OPENF1_TIMEOUT", 10)
+        resp = requests.get(f"{openf1_base}/drivers", timeout=timeout)
         if resp.ok:
             for d in resp.json():
                 if d.get("name_acronym") == driver_code:
@@ -266,6 +233,9 @@ def l1_season():
         }
 
         try:
+            openf1_base = get_openf1_base()
+            timeout = current_app.config.get("OPENF1_TIMEOUT", 10)
+            resp = requests.get(f"{openf1_base}/drivers", timeout=timeout)
             if resp.ok:
                 for d in resp.json():
                     if d.get("name_acronym") == teammate_code:
@@ -306,9 +276,12 @@ def compare_drivers():
 
     try:
         return jsonify(compare_drivers_season(driver1, driver2, season))
+    except ValueError as e:
+        return jsonify({"error": "Invalid input", "message": str(e)}), 400
     except Exception as e:
-        print("COMPARE ERROR:", e)
-        return jsonify({"error": "Driver comparison failed"}), 500
+        logger = current_app.logger
+        logger.error(f"Driver comparison failed: {e}", exc_info=True)
+        return jsonify({"error": "Driver comparison failed", "message": str(e)}), 500
 
 @api_bp.route("/compare/drivers/timeline", methods=["GET"])
 def compare_drivers_timeline():
@@ -327,10 +300,16 @@ def compare_drivers_timeline():
         )
         return jsonify(data)
 
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
+    except ValueError as e:
         return jsonify({
-            "error": str(e),
+            "error": "Invalid input",
+            "message": str(e)
+        }), 400
+    except Exception as e:
+        logger = current_app.logger
+        logger.error(f"Driver comparison timeline failed: {e}", exc_info=True)
+        return jsonify({
+            "error": "Driver comparison timeline failed",
+            "message": str(e),
             "type": type(e).__name__
         }), 500
