@@ -27,11 +27,26 @@ def register_error_handlers(app):
     @app.errorhandler(404)
     def not_found(error):
         """Handle 404 Not Found errors"""
+        # Get available routes for debugging
+        available_routes = []
+        try:
+            with app.app_context():
+                for rule in app.url_map.iter_rules():
+                    if rule.endpoint != 'static':
+                        available_routes.append({
+                            "path": rule.rule,
+                            "methods": list(rule.methods - {'HEAD', 'OPTIONS'})
+                        })
+        except Exception:
+            pass
+        
         return jsonify({
             "error": "Not Found",
-            "message": str(error.description) if hasattr(error, 'description') else "Resource not found",
+            "message": f"The requested URL {request.path} was not found on the server.",
             "status_code": 404,
-            "path": request.path
+            "path": request.path,
+            "method": request.method,
+            "available_routes": available_routes if app.config.get("DEBUG") else None
         }), 404
     
     @app.errorhandler(500)

@@ -4,6 +4,7 @@ import {
   fetchDriverStandings,
   fetchConstructorStandings,
 } from "../api/client";
+import { useSeason } from "../context/SeasonContext";
 
 /* ---------------- TEAM LOGOS ---------------- */
 const TEAM_LOGOS = {
@@ -66,7 +67,7 @@ function Avatar({ src, size = 44, onClick }) {
 }
 
 /* ---------------- DRIVERS TABLE ---------------- */
-function DriversTable({ standings }) {
+function DriversTable({ standings, season }) {
   const navigate = useNavigate();
 
   return (
@@ -99,14 +100,14 @@ function DriversTable({ standings }) {
                     src={d.headshot_url}
                     size={48}
                     onClick={() =>
-                      navigate(`/driver/${d.driver_code}/season/current`)
+                      navigate(`/driver/${d.driver_code}/season/${season || "current"}`)
                     }
                   />
                   <div>
                     <div
                       className="font-semibold text-white hover:underline cursor-pointer"
                       onClick={() =>
-                        navigate(`/driver/${d.driver_code}/season/current`)
+                        navigate(`/driver/${d.driver_code}/season/${season || "current"}`)
                       }
                     >
                       {d.driver_name}
@@ -217,6 +218,7 @@ function ConstructorsTable({ teams }) {
 
 /* ---------------- MAIN ---------------- */
 export default function Stats() {
+  const { season } = useSeason();
   const [view, setView] = useState("drivers");
   const [driverStandings, setDriverStandings] = useState([]);
   const [constructorStandings, setConstructorStandings] = useState([]);
@@ -224,11 +226,12 @@ export default function Stats() {
 
   useEffect(() => {
     async function load() {
+      if (!season) return;
       setLoading(true);
 
       const [driversRes, constructorsRes] = await Promise.all([
-        fetchDriverStandings(),
-        fetchConstructorStandings(),
+        fetchDriverStandings(season),
+        fetchConstructorStandings(season),
       ]);
 
       setDriverStandings(driversRes.standings || []);
@@ -237,7 +240,7 @@ export default function Stats() {
     }
 
     load();
-  }, []);
+  }, [season]);
 
   if (loading) {
     return <div className="p-8 text-slate-400">Loading standings…</div>;
@@ -261,7 +264,7 @@ export default function Stats() {
       </div>
 
       {view === "drivers" ? (
-        <DriversTable standings={driverStandings} />
+        <DriversTable standings={driverStandings} season={season} />
       ) : (
         <ConstructorsTable teams={constructorStandings} />
       )}

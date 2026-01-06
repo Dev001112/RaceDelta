@@ -7,13 +7,13 @@ from fastf1.ergast import Ergast
 
 from scripts.team_meta import TEAM_META
 from scripts.driver_comparison_timeline import build_driver_comparison_timeline
-from scripts.ergast_teams import get_current_f1_teams
+from scripts.ergast_teams import get_f1_teams
 from scripts.ergast_standings import (
-    get_current_driver_standings,
-    get_current_constructor_standings,
+    get_driver_standings,
+    get_constructor_standings,
 )
 
-from app.services.f1_service import get_current_season_drivers, normalize_team
+from app.services.f1_service import get_season_drivers, normalize_team
 from app.services.driver_comparison_fastf1 import compare_drivers_season
 from app.services.l1_season_fastf1 import (
     get_driver_season_metrics,
@@ -21,6 +21,7 @@ from app.services.l1_season_fastf1 import (
 )
 from app.services.radar_normalization import normalize_radar
 from app.services.season_aggregator import build_l1_season
+from app.utils.season_resolver import resolve_seasons, get_season_for_drivers
 
 # ==================================================
 # BLUEPRINT
@@ -43,12 +44,133 @@ def get_openf1_base():
     return current_app.config.get("OPENF1_BASE", "https://api.openf1.org/v1")
 
 # ==================================================
-# DRIVERS LIST (OpenF1)
+# HEALTH CHECK
+# ==================================================
+
+@api_bp.route("/", methods=["GET"])
+@api_bp.route("/health", methods=["GET"])
+def health_check():
+    """Health check endpoint"""
+    return jsonify({
+        "status": "ok",
+        "service": "RaceDelta API",
+        "version": "1.0.0"
+    })
+
+# ==================================================
+# SEASONS ENDPOINT
+# ==================================================
+
+@api_bp.route("/seasons", methods=["GET"])
+def seasons_info():
+    """
+    Get season resolution information.
+    Returns calendar_season, active_season, last_completed_season,
+    is_offseason, and a frontend-ready dropdown array.
+    """
+    try:
+        seasons_data = resolve_seasons()
+        return jsonify(seasons_data)
+    except Exception as e:
+        logger = current_app.logger
+        logger.error(f"Error resolving seasons: {e}", exc_info=True)
+        return jsonify({
+            "error": "Failed to resolve seasons",
+            "message": str(e)
+        }), 500
+
+# ==================================================
+# DRIVERS LIST (OpenF1 - Roster-based)
 # ==================================================
 
 @api_bp.route("/drivers", methods=["GET"])
 def drivers_list():
-    return jsonify(get_current_season_drivers())
+    """
+    Get current season drivers from OpenF1 driver index (roster-based).
+    Does NOT depend on completed races.
+    Includes season and is_offseason metadata.
+    """
+    try:
+        # Get season information
+        seasons_data = resolve_seasons()
+        season_for_drivers = get_season_for_drivers()
+        
+        # Get drivers from OpenF1 (roster-based, not race-dependent)
+        openf1_base = get_openf1_base()
+        timeout = current_app.config.get("OPENF1_TIMEOUT", 10)
+        
+        # Fetch drivers from OpenF1 driver index
+        resp = requests.get(f"{openf1_base}/drivers", timeout=timeout)
+        
+        if not resp.ok:
+            # Fallback to existing service if OpenF1 fails
+            drivers_data = get_season_drivers(year=int(season_for_drivers))
+            drivers_data["season"] = season_for_drivers
+            drivers_data["is_offseason"] = seasons_data["is_offseason"]
+            return jsonify(drivers_data)
+        
+        openf1_drivers = resp.json()
+        
+        # Filter and normalize drivers
+        # OpenF1 driver index contains current season roster
+        # We filter to ensure we have valid driver data
+        drivers = []
+        seen_codes = set()
+        
+        for driver in openf1_drivers:
+            code = driver.get("name_acronym")
+            if not code or code in seen_codes:
+                continue
+            
+            # Only include drivers with essential info
+            first_name = driver.get("first_name", "").strip()
+            last_name = driver.get("last_name", "").strip()
+            if not first_name or not last_name:
+                continue
+            
+            seen_codes.add(code)
+            
+            drivers.append({
+                "driver_code": code,
+                "driver_name": f"{first_name} {last_name}".strip(),
+                "driver_number": driver.get("driver_number"),
+                "team": normalize_team(driver.get("team_name", "")),
+                "country_code": driver.get("country_code", ""),
+                "headshot_url": driver.get("headshot_url"),
+            })
+        
+        # Sort by driver number (nulls last)
+        drivers.sort(key=lambda d: d["driver_number"] if d["driver_number"] is not None else 999)
+        
+        return jsonify({
+            "source": "openf1_roster",
+            "season": season_for_drivers,
+            "is_offseason": seasons_data["is_offseason"],
+            "active_season": seasons_data["active_season"],
+            "last_completed_season": seasons_data["last_completed_season"],
+            "count": len(drivers),
+            "drivers": drivers
+        })
+        
+    except Exception as e:
+        logger = current_app.logger
+        logger.error(f"Error fetching drivers: {e}", exc_info=True)
+        
+        # Fallback to existing service
+        try:
+            drivers_data = get_season_drivers(year=int(get_season_for_drivers()))
+            seasons_data = resolve_seasons()
+            drivers_data["season"] = get_season_for_drivers()
+            drivers_data["is_offseason"] = seasons_data["is_offseason"]
+            return jsonify(drivers_data)
+        except Exception as fallback_error:
+            logger.error(f"Fallback also failed: {fallback_error}", exc_info=True)
+            return jsonify({
+                "error": "Failed to fetch drivers",
+                "message": str(fallback_error),
+                "source": "error",
+                "drivers": []
+            }), 500
 
 # ==================================================
 # TEAMS LIST
@@ -56,7 +178,10 @@ def drivers_list():
 
 @api_bp.route("/teams", methods=["GET"])
 def teams_list():
-    return jsonify(get_current_f1_teams())
+    season = request.args.get("season")
+    if not season:
+        season = resolve_seasons()["display_season"]
+    return jsonify(get_f1_teams(season=season))
 
 # ==================================================
 # DRIVER STANDINGS
@@ -64,7 +189,10 @@ def teams_list():
 
 @api_bp.route("/standings/drivers", methods=["GET"])
 def driver_standings():
-    return jsonify(get_current_driver_standings())
+    season = request.args.get("season")
+    if not season:
+        season = resolve_seasons()["display_season"]
+    return jsonify(get_driver_standings(season=season))
 
 # ==================================================
 # CONSTRUCTOR STANDINGS
@@ -72,7 +200,10 @@ def driver_standings():
 
 @api_bp.route("/standings/constructors", methods=["GET"])
 def constructor_standings():
-    return jsonify(get_current_constructor_standings())
+    season = request.args.get("season")
+    if not season:
+        season = resolve_seasons()["display_season"]
+    return jsonify(get_constructor_standings(season=season))
 
 # ==================================================
 # TEAM DETAIL PAGE
@@ -269,8 +400,8 @@ def compare_drivers():
     driver2 = request.args.get("driver2")
     season = request.args.get("season")
 
-    if season == "current":
-        season = datetime.now().year
+    if season == "current" or not season:
+        season = resolve_seasons()["display_season"]
     else:
         season = int(season)
 
@@ -288,6 +419,9 @@ def compare_drivers_timeline():
     driver1 = request.args.get("driver1")
     driver2 = request.args.get("driver2")
     season = request.args.get("season", "current")
+
+    if season == "current":
+        season = resolve_seasons()["display_season"]
 
     if not driver1 or not driver2:
         return jsonify({"error": "driver1 and driver2 required"}), 400

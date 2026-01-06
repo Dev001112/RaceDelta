@@ -1,18 +1,19 @@
 import { useEffect, useState } from "react";
 import client from "../api/client";
 import { useNavigate } from "react-router-dom";
+import { useSeason } from "../context/SeasonContext";
 
 /* ---------------------------------
    Driver Card (frontend-normalized)
 ---------------------------------- */
-function DriverCard({ d }) {
+function DriverCard({ d, season }) {
   const navigate = useNavigate();
 
   if (!d?.code) return null;
 
   return (
     <div
-      onClick={() => navigate(`/driver/${d.code}/season/current`)}
+      onClick={() => navigate(`/driver/${d.code}/season/${season || "current"}`)}
       style={{
         display: "flex",
         gap: 12,
@@ -78,14 +79,17 @@ function DriverCard({ d }) {
    Drivers Page
 ---------------------------------- */
 export default function Drivers() {
+  const { season } = useSeason();
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
 
   useEffect(() => {
     let alive = true;
+    if (!season) return; // Wait for season to load
 
-    client.fetchDrivers()
+    setLoading(true);
+    client.fetchDrivers(season)
       .then((list) => {
         if (!alive) return;
         console.log("DRIVERS (normalized):", list);
@@ -103,7 +107,7 @@ export default function Drivers() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [season]);
 
   if (loading) {
     return <div style={{ padding: 20 }}>Loading drivers…</div>;
@@ -135,7 +139,7 @@ export default function Drivers() {
         }}
       >
         {drivers.map((d) => (
-          <DriverCard key={d.code} d={d} />
+          <DriverCard key={d.code} d={d} season={season} />
         ))}
       </div>
     </div>

@@ -2,7 +2,14 @@
 // Single source of truth for RaceDelta frontend API access
 
 // Get API base URL from environment variable or default to localhost
-const base = import.meta.env.VITE_API_BASE || "http://127.0.0.1:8000";
+// Normalize to ensure it doesn't end with /api (we'll add it in paths)
+function normalizeBaseUrl(url) {
+  if (!url) return "http://127.0.0.1:8000";
+  // Remove trailing /api if present
+  return url.replace(/\/api\/?$/, "");
+}
+
+const base = normalizeBaseUrl(import.meta.env.VITE_API_BASE || "http://127.0.0.1:8000");
 
 /* --------------------------------------------------
    INTERNAL HELPERS
@@ -28,7 +35,9 @@ async function _parseErrorResponse(res) {
 }
 
 export async function safeFetch(path, opts = {}) {
-  const url = `${base}${path}`;
+  // Ensure path starts with /api
+  const normalizedPath = path.startsWith("/api") ? path : `/api${path}`;
+  const url = `${base}${normalizedPath}`;
   _log("fetch ->", url, opts.method || "GET");
 
   const fetchOpts = {
@@ -76,14 +85,18 @@ export async function safeFetch(path, opts = {}) {
 // DRIVERS (FIXED FOR ALL CASES)
 // -----------------------------
 
-let _driversCache = null;
+// -----------------------------
+// DRIVERS
+// -----------------------------
 
-export async function fetchDrivers() {
-  if (_driversCache) {
-    return _driversCache;
-  }
-
-  const res = await safeFetch("/api/drivers");
+export async function fetchDrivers(season) {
+  // If season provided, don't use cache or key cache by season
+  // For simplicity, lightweight: always fetch if season differs from cache or just fetch.
+  // Or keep it simple:
+  let url = "/api/drivers";
+  if (season) url += `?season=${season}`;
+  
+  const res = await safeFetch(url);
 
   // ✅ Accept BOTH backend formats
   const raw = Array.isArray(res)
@@ -115,7 +128,6 @@ export async function fetchDrivers() {
       photo: d.headshot_url || null
     }));
 
-  _driversCache = cleaned;
   return cleaned;
 }
 
@@ -153,8 +165,9 @@ export function fetchPosition(sessionKey, driverNumber) {
    TEAMS
 -------------------------------------------------- */
 
-export function fetchTeams() {
-  return safeFetch("/api/teams");
+export function fetchTeams(season) {
+  const q = season ? `?season=${encodeURIComponent(season)}` : "";
+  return safeFetch(`/api/teams${q}`);
 }
 
 export function fetchTeamDetail(constructorId) {
@@ -170,13 +183,13 @@ export function fetchStandingsLatest(year) {
   return safeFetch(`/api/standings/latest${q}`);
 }
 
-export function fetchDriverStandings(year) {
-  const q = year ? `?year=${encodeURIComponent(year)}` : "";
+export function fetchDriverStandings(season) {
+  const q = season ? `?season=${encodeURIComponent(season)}` : "";
   return safeFetch(`/api/standings/drivers${q}`);
 }
 
-export function fetchConstructorStandings(year) {
-  const q = year ? `?year=${encodeURIComponent(year)}` : "";
+export function fetchConstructorStandings(season) {
+  const q = season ? `?season=${encodeURIComponent(season)}` : "";
   return safeFetch(`/api/standings/constructors${q}`);
 }
 
@@ -206,11 +219,18 @@ export function fetchDriverComparison({ driver1, driver2, season }) {
 }
 
 /* --------------------------------------------------
+   SEASONS
+-------------------------------------------------- */
+export function fetchSeasons() {
+  return safeFetch("/api/seasons");
+}
+
+/* --------------------------------------------------
    HEALTH
 -------------------------------------------------- */
 
 export function ping() {
-  return safeFetch("/");
+  return safeFetch("/api/");
 }
 
 /* --------------------------------------------------
@@ -232,6 +252,7 @@ const client = {
   fetchDriverSeason,
   fetchDriverComparison,
   fetchDriverTimeline,
+  fetchSeasons,
   ping
 };
 

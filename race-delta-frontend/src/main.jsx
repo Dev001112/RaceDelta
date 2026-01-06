@@ -4,10 +4,14 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import './index.css'
 
+import { SeasonProvider } from './context/SeasonContext'
+
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
-      <App />
+      <SeasonProvider>
+        <App />
+      </SeasonProvider>
     </BrowserRouter>
   </React.StrictMode>
 )

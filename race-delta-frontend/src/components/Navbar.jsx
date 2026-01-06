@@ -1,6 +1,8 @@
 import React from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 
+import SeasonSelector from "./SeasonSelector";
+
 export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -10,8 +12,6 @@ export default function Navbar() {
 
   const linkBase =
     "relative text-sm transition-colors duration-150 hover:text-white";
-  const pillBase =
-    "px-3 py-1.5 rounded-full bg-slate-900/60 border border-slate-700/70 text-xs text-slate-300";
 
   return (
     <header className="sticky top-0 z-30 backdrop-blur-md bg-slate-950/70 border-b border-slate-800/70">
@@ -59,12 +59,9 @@ export default function Navbar() {
           </Link>
         </nav>
 
-        {/* Right side search + tiny pill */}
+        {/* Right side search + season selector */}
         <div className="flex items-center gap-3">
-          <div className={`${pillBase} hidden md:inline-flex items-center gap-2`}>
-            <span className="w-2 h-2 rounded-full bg-emerald-400" />
-            Live telemetry (dev)
-          </div>
+          <SeasonSelector />
 
           <input
             onKeyDown={(e) => {

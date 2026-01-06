@@ -87,20 +87,26 @@ def _api_request(endpoint: str, params: Optional[Dict] = None, use_cache: bool =
 
 #  DRIVERS ....
 
-def get_current_season_drivers() -> Dict:
+def get_season_drivers(year: Optional[int] = None) -> Dict:
     """
-    Clean, race-only, current-season F1 drivers.
+    Clean, race-only F1 drivers for a specific season.
     Uses FastF1 as source of truth.
     """
-
-    if "drivers" in driver_cache:
+    
+    # We might want to key the cache by year?
+    # For now, let's just clear cache or ignore cache if year != current?
+    # Or strict cache key.
+    if year is None:
+        year = datetime.now().year
+        
+    cache_key = f"drivers_{year}"
+    if cache_key in driver_cache:
         return {
             "source": "cache",
-            "drivers": driver_cache["drivers"]
+            "drivers": driver_cache[cache_key]
         }
 
     try:
-        year = datetime.now().year
 
         # Get season schedule
         schedule = fastf1.get_event_schedule(year)
@@ -145,7 +151,7 @@ def get_current_season_drivers() -> Dict:
 
         drivers.sort(key=lambda d: d["driver_number"])
 
-        driver_cache["drivers"] = drivers
+        driver_cache[cache_key] = drivers
 
         return {
             "source": "fastf1",
@@ -155,7 +161,12 @@ def get_current_season_drivers() -> Dict:
         }
 
     except Exception as e:
-        print("Driver fetch failed, using fallback:", e)
+        # Silent fallback during offseason - not an error condition
+        # Log only if it's unexpected (not offseason-related)
+        import logging
+        logger = logging.getLogger(__name__)
+        if "No completed races" not in str(e):
+            logger.debug(f"Driver fetch fallback: {e}")
         return {
             "source": "fallback",
             "drivers": _get_fallback_drivers()

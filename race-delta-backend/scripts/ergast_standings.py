@@ -111,9 +111,9 @@ def get_openf1_driver_index():
 # --------------------------------------------------
 # DRIVER STANDINGS (ERGAST + OPENF1)
 # --------------------------------------------------
-def get_current_driver_standings():
+def get_driver_standings(season="current"):
     response = ergast.get_driver_standings(
-        season="current",
+        season=season,
         round="last"
     )
 
@@ -148,21 +148,21 @@ def get_current_driver_standings():
         })
 
     return {
-        "season": "current",
+        "season": season,
         "standings": standings
     }
 
 # --------------------------------------------------
 # CONSTRUCTOR STANDINGS (ERGAST + OPENF1 COLOURS)
 # --------------------------------------------------
-def get_current_constructor_standings():
+def get_constructor_standings(season="current"):
     response = ergast.get_constructor_standings(
-        season="current",
+        season=season,
         round="last"
     )
 
     if not response or not response.content:
-        return {"season": "current", "standings": []}
+        return {"season": season, "standings": []}
 
     df = response.content[0]
     openf1_drivers = get_openf1_driver_index()
@@ -194,6 +194,6 @@ def get_current_constructor_standings():
         })
 
     return {
-        "season": "current",
+        "season": season,
         "standings": standings
     }

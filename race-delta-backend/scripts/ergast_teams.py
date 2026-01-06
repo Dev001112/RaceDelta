@@ -12,10 +12,10 @@ fastf1.Cache.enable_cache(CACHE_DIR)
 ergast = Ergast()
 
 
-def get_current_f1_teams():
+def get_f1_teams(season="current"):
     """
     Returns official FIA F1 constructor standings
-    for the CURRENT season.
+    for the specified season (default: current).
 
     Schema detected:
     [
@@ -27,7 +27,7 @@ def get_current_f1_teams():
 
     try:
         response = ergast.get_constructor_standings(
-            season="current",
+            season=season,
             round="last"
         )
 

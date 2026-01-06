@@ -1,13 +1,18 @@
 import React, { useEffect, useState } from "react";
 import { fetchTeams } from "../api/client";
 import TeamCard from "../components/TeamCard";
+import { useSeason } from "../context/SeasonContext";
 
 export default function Teams() {
+  const { season } = useSeason();
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchTeams()
+    if (!season) return;
+    setLoading(true);
+
+    fetchTeams(season)
       .then((data) => {
         setTeams(Array.isArray(data) ? data : []);
         setLoading(false);
@@ -16,7 +21,7 @@ export default function Teams() {
         console.error("Teams fetch error:", err);
         setLoading(false);
       });
-  }, []);
+  }, [season]);
 
   if (loading) {
     return <div style={{ padding: 20, color: "#cbd5e1" }}>Loading teams…</div>;
