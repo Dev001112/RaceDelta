@@ -32,19 +32,36 @@ export default function TeamDetail() {
         ← Back
       </button>
 
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-        {logo && (
-          <img
-            src={logo}
-            alt={team.team_name}
-            style={{ width: 90, objectFit: "contain" }}
-          />
-        )}
-        <div>
-          <h1>{team.team_name}</h1>
-          <div style={{ color: "#9fb0c9" }}>{team.nationality}</div>
+      {/* Header with Car Image */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 32 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          {logo && (
+            <img
+              src={logo}
+              alt={team.team_name}
+              style={{ width: 90, objectFit: "contain" }}
+            />
+          )}
+          <div>
+            <h1 style={{ fontSize: 32, fontWeight: 700, margin: 0 }}>{team.team_name}</h1>
+            <div style={{ color: "#9fb0c9", marginTop: 4 }}>{team.nationality}</div>
+          </div>
         </div>
+
+        {team.car_image && (
+          <div style={{ marginRight: 24 }}>
+            <img
+              src={team.car_image}
+              alt={`${team.car} Car`}
+              style={{
+                maxWidth: 400,
+                width: "100%",
+                height: "auto",
+                filter: "drop-shadow(0 10px 10px rgba(0,0,0,0.5))"
+              }}
+            />
+          </div>
+        )}
       </div>
 
       {/* Metadata */}

@@ -62,3 +62,8 @@ migrations/versions/
 **/.cache/
 fastf1_cache/
 *.pickle
+
+# Testing
+.pytest_cache/
+htmlcov/
+coverage.xml

@@ -5,7 +5,7 @@ from datetime import datetime
 import requests
 from fastf1.ergast import Ergast
 
-from scripts.team_meta import TEAM_META
+from scripts.team_meta import get_team_meta
 from scripts.driver_comparison_timeline import build_driver_comparison_timeline
 from scripts.ergast_teams import get_f1_teams
 from scripts.ergast_standings import (
@@ -212,8 +212,12 @@ def constructor_standings():
 @api_bp.route("/teams/<constructor_id>", methods=["GET"])
 def team_detail(constructor_id):
     try:
+        season = request.args.get("season")
+        if not season:
+            season = resolve_seasons()["display_season"]
+        
         standings = ergast.get_constructor_standings(
-            season="current",
+            season=season,
             round="last"
         )
 
@@ -231,26 +235,37 @@ def team_detail(constructor_id):
         team_name = team.get("constructorName")
         nationality = team.get("constructorNationality")
 
-        # ---- OpenF1 headshots (single request)
+        # ---- Headshot Logic (Unified)
+        # Use our robust service that handles caching and fallbacks
+        headshot_map = {}
         try:
-            openf1_base = get_openf1_base()
-            timeout = current_app.config.get("OPENF1_TIMEOUT", 10)
-            openf1_resp = requests.get(f"{openf1_base}/drivers", timeout=timeout)
-            openf1_data = openf1_resp.json()
-            headshot_map = {
-                d.get("name_acronym"): d.get("headshot_url")
-                for d in openf1_data
-                if d.get("name_acronym")
-            }
-        except Exception:
-            headshot_map = {}
+            # We want the 'active' driver list which contains headshots
+            # resolve_seasons() to safely determine year for drivers (usually 2025/2026)
+            s_data = resolve_seasons()
+            # If 2026 is active but empty, we want 2025. This logic is inside get_season_drivers usually
+            # But let's be explicit:
+            target_year = s_data['display_season']
+            
+            # Fetch all drivers for the season using our service
+            all_drivers_data = get_season_drivers(year=target_year)
+            
+            # Create a map: Code -> Headshot URL
+            if "drivers" in all_drivers_data:
+                 for d in all_drivers_data["drivers"]:
+                     c = d.get("driver_code") or d.get("code") # Handle both schemas
+                     url = d.get("headshot_url")
+                     if c and url:
+                         headshot_map[c] = url
+                         
+        except Exception as e:
+             current_app.logger.warning(f"Failed to fetch headshots via service: {e}")
 
         # ---- Team drivers
         drivers = []
         seen = set()
 
         driver_standings = ergast.get_driver_standings(
-            season="current",
+            season=season,
             round="last"
         )
 
@@ -279,7 +294,7 @@ def team_detail(constructor_id):
                 if len(drivers) == 2:
                     break
 
-        meta = TEAM_META.get(constructor_id, {})
+        meta = get_team_meta(constructor_id)
 
         return jsonify({
             "team_name": team_name,
@@ -291,7 +306,8 @@ def team_detail(constructor_id):
             "drivers": drivers,
             "team_principal": meta.get("principal"),
             "engine": meta.get("engine"),
-            "car": meta.get("car")
+            "car": meta.get("car"),
+            "car_image": meta.get("car_image")
         })
 
     except Exception as e:
