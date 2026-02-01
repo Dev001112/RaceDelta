@@ -1,0 +1,4 @@
+Cleanup Complete.
+Deleted temp files.
+Updated gitignore.
+Ready for commit.

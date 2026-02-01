@@ -93,10 +93,10 @@ desktop.ini
 # ================================
 # Project Specific / Temp
 # ================================
-measure_latency.py
-check_driver.py
-seed_db.py
 *.tmp
 *.bak
-MEASUREMENTS.txt
+*.bat
+TODO.md
+*.spec
+scratch.py
 
