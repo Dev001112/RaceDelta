@@ -23,12 +23,23 @@ function normalizeComparison(res, driver1, driver2) {
   return res;
 }
 
+import { useSeason } from "../context/SeasonContext";
+
 export default function DriverComparison() {
+  const { seasonOptions, displaySeason } = useSeason();
   const [drivers, setDrivers] = useState([]);
 
   const [driver1, setDriver1] = useState("");
   const [driver2, setDriver2] = useState("");
-  const [season, setSeason] = useState("current");
+  // Default to displaySeason if available, otherwise "current" (or let useEffect sync it)
+  const [season, setSeason] = useState(displaySeason || "current");
+
+  // Sync local season with context when it loads
+  useEffect(() => {
+    if (displaySeason) {
+      setSeason(displaySeason);
+    }
+  }, [displaySeason]);
 
   const [comparison, setComparison] = useState(null);
   const [timeline, setTimeline] = useState(null);
@@ -124,9 +135,15 @@ export default function DriverComparison() {
             onChange={(e) => setSeason(e.target.value)}
             className="bg-[#0f172a] border border-gray-700 rounded-lg p-3 text-white h-[52px]"
           >
-            <option value="current">Current season</option>
-            <option value="2024">2024</option>
-            <option value="2023">2023</option>
+            {seasonOptions.length > 0 ? (
+              seasonOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))
+            ) : (
+              <option value="current">Current Season</option>
+            )}
           </select>
         </div>
 

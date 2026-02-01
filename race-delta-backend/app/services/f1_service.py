@@ -1,13 +1,140 @@
 # app/services/f1_service.py
 import os
 import requests
+import logging
 from datetime import datetime
 from typing import Dict, List, Optional, Any
-from cachetools import TTLCache
+from sqlalchemy import text
+from flask import current_app
+from cachetools import TTLCache, LRUCache
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import fastf1
-from cachetools import TTLCache
+
+# Import models
+try:
+    from models import db, Driver, Constructor, Race, RaceResult
+    from app.services.ingestor import DataIngestor
+except ImportError:
+    # Fallback for when running scripts outside app context
+    from app.models import db, Driver, Constructor, Race, RaceResult
+    from app.services.ingestor import DataIngestor
+
+logger = logging.getLogger(__name__)
+
+# F1 Points
+F1_POINTS = {1: 25, 2: 18, 3: 15, 4: 12, 5: 10, 6: 8, 7: 6, 8: 4, 9: 2, 10: 1}
+
+def get_season_drivers(year: Optional[int] = None) -> Dict:
+    """
+    Get drivers for a season from DB.
+    If DB is empty for this season, trigger ingestion of the schedule and initial data.
+    """
+    if year is None:
+        year = datetime.now().year
+        
+    try:
+        # 1. Check DB for drivers who have results in this season
+        # We join RaceResult -> Race to filter by season
+        results = db.session.query(Driver, Constructor)\
+            .join(RaceResult, Driver.driver_id == RaceResult.driver_id)\
+            .join(Race, RaceResult.race_id == Race.race_id)\
+            .join(Constructor, RaceResult.constructor_id == Constructor.constructor_id)\
+            .filter(Race.season == year)\
+            .group_by(Driver.driver_id, Constructor.constructor_id)\
+            .all()
+            
+        drivers_list = []
+        if results:
+            seen_drivers = set()
+            for driver, constructor in results:
+                if driver.driver_code in seen_drivers:
+                    continue
+                seen_drivers.add(driver.driver_code)
+                
+                drivers_list.append({
+                    "driver_code": driver.driver_code,
+                    "driver_name": driver.full_name,
+                    "driver_number": 0, # We might not store number on driver, but in result or lookup
+                    "team": constructor.name,
+                    "country_code": driver.nationality,
+                    "headshot_url": driver.photo_url
+                })
+            
+            # Sort
+            drivers_list.sort(key=lambda x: x["driver_name"])
+            
+            return {
+                "source": "database",
+                "season": year,
+                "count": len(drivers_list),
+                "drivers": drivers_list
+            }
+            
+        else:
+            # DB Empty? Trigger Ingestion
+            logger.info(f"No drivers found in DB for {year}. Triggering ingestion.")
+            DataIngestor.ingest_season_schedule(year)
+            # Maybe ingest first race results to get drivers?
+            # Find first completed race
+            race = Race.query.filter_by(season=year).order_by(Race.round).first()
+            if race and race.race_date < datetime.utcnow():
+                logger.info(f"Ingesting results for Round {race.round} to populate drivers.")
+                DataIngestor.ingest_race_results(year, race.round)
+                # Recursion to fetch again
+                return get_season_drivers(year)
+                
+            return {"source": "empty", "drivers": []}
+
+    except Exception as e:
+        logger.error(f"Error fetching season drivers: {e}")
+        return {"source": "error", "drivers": [], "error": str(e)}
+
+def get_race_schedule(year: Optional[int] = None) -> Dict:
+    """Get race calendar from DB"""
+    if not year:
+        year = datetime.now().year
+        
+    try:
+        races = Race.query.filter_by(season=year).order_by(Race.round).all()
+        
+        if not races:
+            # Trigger ingestion
+            DataIngestor.ingest_season_schedule(year)
+            races = Race.query.filter_by(season=year).order_by(Race.round).all()
+            
+        race_list = []
+        for r in races:
+            race_list.append({
+                "round": r.round,
+                "name": r.name,
+                "location": r.circuit, # We stored location in circuit column
+                "circuit": r.circuit,
+                "date": r.race_date.isoformat() if r.race_date else None,
+                "status": r.status
+            })
+            
+        return {
+            "races": race_list,
+            "season": year,
+            "source": "database"
+        }
+    except Exception as e:
+        logger.error(f"Error fetching schedule: {e}")
+        return {"races": [], "season": year, "error": str(e)}
+
+# Stub other functions to use legacy or simple DB
+def get_driver_standings(season="current"):
+    # ... (Keep logic but allow DB query if needed)
+    # For now, return empty to not break app, or generic
+    return {"standings": [], "source": "todo_db"} 
+    
+def get_constructor_standings(season="current"):
+    return {"standings": [], "source": "todo_db"} 
+
+def get_driver_laps(driver_code):
+    return {"laps": []}
+
 
 
 
@@ -174,30 +301,8 @@ def get_season_drivers(year: Optional[int] = None) -> Dict:
 
 
 def _get_fallback_drivers() -> List[Dict]:
-    """Fallback driver data for 2025 season"""
-    return [
-        {"id": 1, "name": "Max Verstappen", "code": "VER", "number": 1, "team": "Red Bull Racing", "country": "NED", "photo": ""},
-        {"id": 11, "name": "Sergio Perez", "code": "PER", "number": 11, "team": "Red Bull Racing", "country": "MEX", "photo": ""},
-        {"id": 16, "name": "Charles Leclerc", "code": "LEC", "number": 16, "team": "Ferrari", "country": "MON", "photo": ""},
-        {"id": 44, "name": "Lewis Hamilton", "code": "HAM", "number": 44, "team": "Ferrari", "country": "GBR", "photo": ""},
-        {"id": 63, "name": "George Russell", "code": "RUS", "number": 63, "team": "Mercedes", "country": "GBR", "photo": ""},
-        {"id": 12, "name": "Andrea Kimi Antonelli", "code": "ANT", "number": 12, "team": "Mercedes", "country": "ITA", "photo": ""},
-        {"id": 4, "name": "Lando Norris", "code": "NOR", "number": 4, "team": "McLaren", "country": "GBR", "photo": ""},
-        {"id": 81, "name": "Oscar Piastri", "code": "PIA", "number": 81, "team": "McLaren", "country": "AUS", "photo": ""},
-        {"id": 14, "name": "Fernando Alonso", "code": "ALO", "number": 14, "team": "Aston Martin", "country": "ESP", "photo": ""},
-        {"id": 18, "name": "Lance Stroll", "code": "STR", "number": 18, "team": "Aston Martin", "country": "CAN", "photo": ""},
-        {"id": 10, "name": "Pierre Gasly", "code": "GAS", "number": 10, "team": "Alpine", "country": "FRA", "photo": ""},
-        {"id": 43, "name": "Franco Colapinto", "code": "COL", "number": 43, "team": "Alpine", "country": "ARG", "photo": ""},
-        {"id": 25, "name": "Jack Doohan", "code": "DOO", "number": 25, "team": "Alpine", "country": "AUS", "photo": ""},
-        {"id": 23, "name": "Alexander Albon", "code": "ALB", "number": 23, "team": "Williams", "country": "THA", "photo": ""},
-        {"id": 2, "name": "Carlos Sainz", "code": "SAI", "number": 2, "team": "Williams", "country": "ESP", "photo": ""},
-        {"id": 27, "name": "Nico Hulkenberg", "code": "HUL", "number": 27, "team": "Sauber", "country": "GER", "photo": ""},
-        {"id": 7, "name": "Gabriel Bortoleto", "code": "BOR", "number": 7, "team": "Sauber", "country": "BRA", "photo": ""},
-        {"id": 31, "name": "Esteban Ocon", "code": "OCO", "number": 31, "team": "Haas", "country": "FRA", "photo": ""},
-        {"id": 87, "name": "Oliver Bearman", "code": "BEA", "number": 87, "team": "Haas", "country": "GBR", "photo": ""},
-        {"id": 22, "name": "Yuki Tsunoda", "code": "TSU", "number": 22, "team": "RB", "country": "JPN", "photo": ""},
-        {"id": 30, "name": "Liam Lawson", "code": "LAW", "number": 30, "team": "RB", "country": "NZL", "photo": ""},
-    ]
+    """Fallback driver data - Simplified"""
+    return []
 
 
 #LAP DATA 
@@ -448,29 +553,8 @@ def get_driver_standings(season: str = "current") -> Dict:
 
 
 def _get_fallback_standings():
-    """2025 F1 Driver Championship - Live Season (Updated Dec 2025)"""
-    return [
-        {"position": 1, "driver": "Lando Norris", "code": "NOR", "team": "McLaren", "points": 437, "wins": 6, "podiums": 18},
-        {"position": 2, "driver": "Max Verstappen", "code": "VER", "team": "Red Bull Racing", "points": 429, "wins": 9, "podiums": 16},
-        {"position": 3, "driver": "Charles Leclerc", "code": "LEC", "team": "Ferrari", "points": 356, "wins": 3, "podiums": 14},
-        {"position": 4, "driver": "Oscar Piastri", "code": "PIA", "team": "McLaren", "points": 292, "wins": 3, "podiums": 9},
-        {"position": 5, "driver": "Carlos Sainz", "code": "SAI", "team": "Ferrari", "points": 244, "wins": 1, "podiums": 7},
-        {"position": 6, "driver": "George Russell", "code": "RUS", "team": "Mercedes", "points": 235, "wins": 2, "podiums": 7},
-        {"position": 7, "driver": "Lewis Hamilton", "code": "HAM", "team": "Ferrari", "points": 190, "wins": 2, "podiums": 5},
-        {"position": 8, "driver": "Sergio Perez", "code": "PER", "team": "Red Bull Racing", "points": 152, "wins": 0, "podiums": 3},
-        {"position": 9, "driver": "Fernando Alonso", "code": "ALO", "team": "Aston Martin", "points": 68, "wins": 0, "podiums": 0},
-        {"position": 10, "driver": "Pierre Gasly", "code": "GAS", "team": "Alpine", "points": 42, "wins": 0, "podiums": 1},
-        {"position": 11, "driver": "Nico Hulkenberg", "code": "HUL", "team": "Sauber", "points": 37, "wins": 0, "podiums": 0},
-        {"position": 12, "driver": "Yuki Tsunoda", "code": "TSU", "team": "RB", "points": 30, "wins": 0, "podiums": 0},
-        {"position": 13, "driver": "Lance Stroll", "code": "STR", "team": "Aston Martin", "points": 24, "wins": 0, "podiums": 0},
-        {"position": 14, "driver": "Esteban Ocon", "code": "OCO", "team": "Haas", "points": 23, "wins": 0, "podiums": 0},
-        {"position": 15, "driver": "Kevin Magnussen", "code": "MAG", "team": "Haas", "points": 16, "wins": 0, "podiums": 0},
-        {"position": 16, "driver": "Alexander Albon", "code": "ALB", "team": "Williams", "points": 12, "wins": 0, "podiums": 0},
-        {"position": 17, "driver": "Franco Colapinto", "code": "COL", "team": "Alpine", "points": 12, "wins": 0, "podiums": 0},
-        {"position": 18, "driver": "Oliver Bearman", "code": "BEA", "team": "Haas", "points": 7, "wins": 0, "podiums": 0},
-        {"position": 19, "driver": "Jack Doohan", "code": "DOO", "team": "Alpine", "points": 5, "wins": 0, "podiums": 0},
-        {"position": 20, "driver": "Andrea Kimi Antonelli", "code": "ANT", "team": "Mercedes", "points": 4, "wins": 0, "podiums": 0},
-    ]
+    """Fallback driver standings - Simplified"""
+    return []
 
 
 def _get_fallback_constructor_standings():
@@ -586,14 +670,8 @@ def get_constructor_standings(season: str = "current") -> Dict:
 
 
 def _get_fallback_constructor_standings():
-    """Fallback constructor standings"""
-    return [
-        {"position": 1, "team": "Red Bull Racing", "points": 860, "wins": 21},
-        {"position": 2, "team": "Mercedes", "points": 409, "wins": 3},
-        {"position": 3, "team": "Ferrari", "points": 406, "wins": 1},
-        {"position": 4, "team": "McLaren", "points": 302, "wins": 0},
-        {"position": 5, "team": "Aston Martin", "points": 280, "wins": 0},
-    ]
+    """Fallback constructor standings - Simplified"""
+    return []
 
 
 # TYRE & TELEMETRY DATA 

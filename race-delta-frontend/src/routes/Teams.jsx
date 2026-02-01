@@ -32,16 +32,10 @@ export default function Teams() {
   }
 
   return (
-    <div style={{ padding: 20 }}>
-      <h2 style={{ color: "#fff", marginBottom: 12 }}>Teams</h2>
+    <div className="p-6">
+      <h2 className="text-white text-2xl font-bold mb-6">Teams</h2>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-          gap: 12
-        }}
-      >
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
         {teams.map((team) => (
           <TeamCard
             key={team.constructor_id}

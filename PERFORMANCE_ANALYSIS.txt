@@ -1,0 +1,6 @@
+Slow Loading Analysis:
+1. Version mismatch in package.json (Vite 7.x vs 5.x).
+2. Backend API latency likely blocking rendering.
+3. Postgres integration (Next Step) will fix data speeds.
+
+Recommendation: Proceed with Postgres integration.

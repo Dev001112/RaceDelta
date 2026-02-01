@@ -1,0 +1,1 @@
+PLEASE RUN: npm install framer-motion clsx tailwind-merge lucide-react

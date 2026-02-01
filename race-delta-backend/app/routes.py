@@ -294,7 +294,7 @@ def team_detail(constructor_id):
                 if len(drivers) == 2:
                     break
 
-        meta = get_team_meta(constructor_id)
+        meta = get_team_meta(constructor_id, season)
 
         return jsonify({
             "team_name": team_name,
@@ -338,20 +338,31 @@ def l1_season():
     }
 
     try:
-        openf1_base = get_openf1_base()
-        timeout = current_app.config.get("OPENF1_TIMEOUT", 10)
-        resp = requests.get(f"{openf1_base}/drivers", timeout=timeout)
-        if resp.ok:
-            for d in resp.json():
-                if d.get("name_acronym") == driver_code:
-                    driver_meta["name"] = (
-                        f"{d.get('first_name','')} {d.get('last_name','')}".strip()
-                    )
-                    driver_meta["team"] = d.get("team_name")
-                    driver_meta["image"] = d.get("headshot_url")
+        # Use robust service to find driver
+        # We need to find the driver in the resolved season context
+        # First try the requested season, if that fails, maybe try current?
+        # Actually, get_season_drivers handles logic.
+        
+        # We need to look up this specific driver_code in the season list
+        drivers_data = get_season_drivers(year=season)
+        
+        # If not allowed or empty, try default season?
+        # get_season_drivers usually handles fallbacks if configured, but let's just search
+        
+        found_driver = None
+        if "drivers" in drivers_data:
+            for d in drivers_data["drivers"]:
+                if d.get("driver_code") == driver_code:
+                    found_driver = d
                     break
-    except Exception:
-        pass
+        
+        if found_driver:
+             driver_meta["name"] = found_driver.get("driver_name")
+             driver_meta["team"] = found_driver.get("team")
+             driver_meta["image"] = found_driver.get("headshot_url")
+             
+    except Exception as e:
+        current_app.logger.warning(f"Metadata lookup failed in l1_season: {e}")
 
     # ==================================================
     # MAIN DRIVER – SEASON METRICS
@@ -463,3 +474,30 @@ def compare_drivers_timeline():
             "message": str(e),
             "type": type(e).__name__
         }), 500
+
+# ==================================================
+# DATA INGESTION (ADMIN)
+# ==================================================
+
+@api_bp.route("/admin/ingest/schedule/<int:year>", methods=["POST"])
+def ingest_schedule(year):
+    """Trigger schedule ingestion for a season"""
+    try:
+        from app.services.ingestor import DataIngestor
+        
+        count = DataIngestor.ingest_season_schedule(year)
+        return jsonify({"message": f"Ingested {count} races for {year}", "success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@api_bp.route("/admin/ingest/results/<int:year>/<int:round_num>", methods=["POST"])
+def ingest_results(year, round_num):
+    """Trigger result ingestion for a specific race"""
+    try:
+        from app.services.ingestor import DataIngestor
+        
+        count = DataIngestor.ingest_race_results(year, round_num)
+        return jsonify({"message": f"Ingested {count} results", "success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+

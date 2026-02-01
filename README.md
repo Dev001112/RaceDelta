@@ -94,6 +94,26 @@ It helps put every race into context.
 
 ---
 
+## Setup
+
+1. **Frontend**:
+   ```bash
+   cd race-delta-frontend
+   npm install
+   npm run dev
+   ```
+   *Note: If you encounter missing package errors, run `fix_frontend_errors.bat` in the root directory.*
+
+2. **Backend**:
+   ```bash
+   cd race-delta-backend
+   pip install -r requirements.txt
+   python create_tables.py
+   python app.py
+   ```
+
+---
+
 <h2>Tech Stack</h2>
 
 RaceDelta is built with a modern, scalable setup:

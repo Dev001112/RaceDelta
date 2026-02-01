@@ -1,7 +1,10 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-
+import { motion } from "framer-motion";
+import Card from "../components/ui/Card";
+import Button from "../components/ui/Button";
 import FeaturedRaceCard from "../components/FeaturedRaceCard";
+import { ArrowRight, Activity, TrendingUp, Calendar, Zap } from "lucide-react";
 
 // Temporary featured races (replace later with API)
 const sampleRaces = [
@@ -25,191 +28,107 @@ export default function Home() {
   const navigate = useNavigate();
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-16 py-8">
       {/* ================= HERO ================= */}
-      <section className="card relative overflow-hidden">
-        <div className="absolute -right-12 -top-12 w-40 h-40 rounded-full bg-cyan-500/10 blur-3xl pointer-events-none" />
-        <div className="absolute -left-16 bottom-0 w-44 h-44 rounded-full bg-indigo-500/5 blur-3xl pointer-events-none" />
+      <section className="relative overflow-hidden rounded-3xl bg-[#0b0f14] border border-white/5 p-8 md:p-16">
+        {/* Background Effects */}
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-cyan-500/10 rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[100px] pointer-events-none" />
 
-        <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-8">
-          <div>
-            <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
-              F1 telemetry & race delta
-            </p>
+        <div className="relative z-10 max-w-2xl">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-bold uppercase tracking-wider mb-6">
+              <Zap size={12} className="fill-current" />
+              Next Gen F1 Telemetry
+            </div>
 
-            <h1 className="mt-2 text-3xl md:text-4xl font-semibold leading-tight">
-              See races as{" "}
-              <span className="text-cyan-400">time series</span>, not just results.
+            <h1 className="text-5xl md:text-7xl font-bold leading-[1.1] tracking-tight mb-6 text-white">
+              Data that <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600">
+                tells the story
+              </span>
             </h1>
 
-            <p className="mt-3 text-sm text-slate-400 max-w-xl">
-              RaceDelta turns lap times, sector splits and tyre stints into clean,
-              minimal visual stories for every race weekend.
+            <p className="text-lg text-slate-400 leading-relaxed mb-8 max-w-lg">
+              Go beyond the standings. Analyze pace, strategies, and telemetry battles with RaceDelta's advanced visual dashboard.
             </p>
 
-            <div className="mt-5 flex flex-wrap gap-3 text-xs">
-              <div className="badge">Latest: Abu Dhabi 2025</div>
-              <div className="badge">Drivers: 20</div>
-              <div className="badge">Teams: 10</div>
+            <div className="flex flex-wrap gap-4">
+              <Button onClick={() => navigate("/compare/drivers")}>
+                Compare Drivers <ArrowRight size={16} className="ml-2" />
+              </Button>
+              <Button variant="secondary" onClick={() => navigate("/teams")}>
+                Explore Teams
+              </Button>
             </div>
+          </motion.div>
+        </div>
+      </section>
 
-            {/* CTA */}
-            <button
-              onClick={() => navigate("/compare/drivers")}
-              className="
-                mt-6 inline-flex items-center gap-2
-                px-5 py-2.5 rounded-lg
-                bg-cyan-500 text-black
-                text-sm font-semibold
-                hover:bg-cyan-400
-                transition
-              "
-            >
-              Compare drivers →
-            </button>
+      {/* ================= QUICK STATS GRID ================= */}
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card onClick={() => navigate("/compare/drivers")} className="group">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-2 rounded-lg bg-orange-500/10 text-orange-500">
+              <Activity size={20} />
+            </div>
+            <span className="text-xs text-slate-500 font-medium bg-white/5 px-2 py-1 rounded">LIVE</span>
           </div>
+          <h3 className="text-xl font-bold text-white mb-2 group-hover:text-cyan-400 transition-colors">Compare Drivers</h3>
+          <p className="text-sm text-slate-400">Head-to-head telemetry, pace analysis, and cornering speeds.</p>
+        </Card>
 
-          {/* Quick Search */}
-          <div className="w-full md:w-72">
-            <div className="rounded-xl border border-slate-700/60 bg-slate-900/80 p-4">
-              <div className="flex items-center justify-between text-xs text-slate-400 mb-3">
-                <span>Quick search</span>
-                <span>Ctrl + K</span>
-              </div>
+        <Card onClick={() => navigate("/stats")}>
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500">
+              <TrendingUp size={20} />
+            </div>
+          </div>
+          <h3 className="text-xl font-bold text-white mb-2">Season Trends</h3>
+          <p className="text-sm text-slate-400">Visualizing championship battles and team development rates.</p>
+        </Card>
 
-              <input
-                placeholder="Search driver, race or team"
-                className="
-                  w-full px-3 py-2 rounded-md
-                  bg-slate-950 border border-slate-700
-                  text-xs text-white
-                  placeholder:text-slate-500
-                  focus:outline-none focus:ring-1 focus:ring-cyan-500
-                "
-              />
+        <Card>
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-2 rounded-lg bg-purple-500/10 text-purple-500">
+              <Calendar size={20} />
+            </div>
+            <span className="text-xs text-slate-500 font-medium">UPCOMING</span>
+          </div>
+          <h3 className="text-xl font-bold text-white mb-2 outline-dashed outline-1 outline-transparent">Race Monitor</h3>
+          <p className="text-sm text-slate-400">Live lap times and gap analysis (Coming Soon).</p>
+        </Card>
+      </section>
 
-              <p className="mt-3 text-[11px] text-slate-400">
-                Try:{" "}
-                <span
-                  className="text-cyan-400 cursor-pointer"
-                  onClick={() =>
-                    navigate("/compare/drivers")
-                  }
-                >
-                  VER vs HAM Abu Dhabi
-                </span>
+      {/* ================= FEATURED RACES ================= */}
+      <section>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-white">Featured Races</h2>
+          <Button variant="ghost" onClick={() => navigate("/season/2025")}>View All →</Button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {sampleRaces.map((race) => (
+            <FeaturedRaceCard key={race.title} race={race} />
+          ))}
+
+          {/* Promo Card */}
+          <div className="hidden lg:block relative rounded-xl overflow-hidden bg-gradient-to-br from-cyan-900/40 to-blue-900/40 border border-white/10 p-8 flex flex-col justify-center">
+            <div className="absolute inset-0 bg-[url('/src/assets/grid-pattern.svg')] opacity-30" />
+            <div className="relative z-10">
+              <h3 className="text-2xl font-bold text-white mb-2">Pro Analytics</h3>
+              <p className="text-sm text-cyan-200 mb-6">
+                Unlock deep dive metrics including tire degradation models and fuel-adjusted pace.
               </p>
+              <Button variant="primary" className="w-full">Get Started</Button>
             </div>
           </div>
         </div>
       </section>
-
-      {/* ================= QUICK CARDS ================= */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-        <div className="card card-hover">
-          <div className="text-xs text-slate-400 mb-1">Weekend overview</div>
-          <div className="text-lg font-semibold">Abu Dhabi 2025</div>
-          <p className="mt-1 text-slate-400">
-            Strategy summary, safety cars and stint performance.
-          </p>
-        </div>
-
-        {/* CLICKABLE COMPARISON CARD */}
-        <div
-          className="card card-hover cursor-pointer"
-          onClick={() => navigate("/compare/drivers")}
-        >
-          <div className="text-xs text-slate-400 mb-1">Driver comparison</div>
-          <div className="text-lg font-semibold">VER vs HAM</div>
-          <p className="mt-1 text-slate-400">
-            Points progression and season head-to-head.
-          </p>
-        </div>
-
-        <div className="card card-hover">
-          <div className="text-xs text-slate-400 mb-1">Telemetry</div>
-          <div className="text-lg font-semibold">Sector profiles</div>
-          <p className="mt-1 text-slate-400">
-            Braking points and minimum speeds per corner.
-          </p>
-        </div>
-      </section>
-
-      {/* ================= FEATURED ================= */}
-      <div className="grid md:grid-cols-3 gap-6">
-        <div className="md:col-span-2 space-y-6">
-          <section>
-            <h2 className="text-xl font-semibold mb-3">
-              Featured races
-            </h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {sampleRaces.map((race) => (
-                <FeaturedRaceCard
-                  key={race.title}
-                  race={race}
-                />
-              ))}
-            </div>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-semibold mb-3">
-              Driver highlights
-            </h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="card card-hover">
-                <div className="text-xs text-slate-400 mb-1">
-                  Form trend
-                </div>
-                <div className="font-semibold">Max Verstappen</div>
-                <p className="text-xs text-slate-400 mt-1">
-                  Last 5 races: 1st · 1st · 2nd · 1st · 1st
-                </p>
-              </div>
-
-              <div className="card card-hover">
-                <div className="text-xs text-slate-400 mb-1">
-                  Qualifying delta
-                </div>
-                <div className="font-semibold">Lando Norris</div>
-                <p className="text-xs text-slate-400 mt-1">
-                  Avg gap to teammate: −0.12s
-                </p>
-              </div>
-            </div>
-          </section>
-        </div>
-
-        {/* ================= SIDEBAR ================= */}
-        <aside className="space-y-4">
-          <section className="card">
-            <h3 className="text-sm font-semibold mb-2">
-              Filters
-            </h3>
-            <div className="space-y-2 text-xs text-slate-400">
-              <div>
-                Season:{" "}
-                <span className="text-cyan-400 font-medium">
-                  2025
-                </span>
-              </div>
-              <div>Session: Race · Quali · Practice</div>
-              <div>Metric: Lap time · Pace delta</div>
-            </div>
-          </section>
-
-          <section className="card">
-            <h3 className="text-sm font-semibold mb-2">
-              Coming next
-            </h3>
-            <p className="text-xs text-slate-400">
-              Live FastF1 / OpenF1 telemetry and deeper comparison views.
-            </p>
-          </section>
-        </aside>
-      </div>
     </div>
   );
 }
