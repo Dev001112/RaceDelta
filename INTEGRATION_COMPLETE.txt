@@ -1,4 +1,0 @@
-POSTGRES INTEGRATION COMPLETE
-1. Backend adjusted to query DB.
-2. Ingestion logic active.
-3. Restart backend (python app.py) and frontend.

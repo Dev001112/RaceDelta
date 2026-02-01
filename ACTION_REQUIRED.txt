@@ -1,4 +1,0 @@
-ACTION REQUIRED:
-Run 'fix_frontend_errors.bat' to install missing dependencies.
-Then restart 'npm run dev'.
-This will fix the framer-motion import error.

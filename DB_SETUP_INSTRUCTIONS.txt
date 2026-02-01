@@ -1,8 +1,0 @@
-DB CONNECTION STATUS:
-Attempting to connect to: postgresql://racedelta_user:StrongPassword123@localhost:5432/racedelta_db
-
-IF THIS FAILS:
-Please ensure you have created the database and user:
-CREATE DATABASE racedelta_db;
-CREATE USER racedelta_user WITH PASSWORD 'StrongPassword123';
-GRANT ALL PRIVILEGES ON DATABASE racedelta_db TO racedelta_user;

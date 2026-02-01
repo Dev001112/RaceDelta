@@ -1,3 +1,0 @@
-Code and files optimized.
-Redundant scripts removed.
-Service simplified.
