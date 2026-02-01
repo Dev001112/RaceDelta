@@ -1,5 +1,5 @@
 # ================================
-# Logs
+# Logs and Databases
 # ================================
 logs/
 *.log
@@ -8,62 +8,95 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
-
-# ================================
-# Frontend (Node / Vite / Next)
-# ================================
-node_modules/
-dist/
-dist-ssr/
-.next/
-.cache/
-*.local
-
-# Env files
-.env
-.env.local
-.env.*.local
-
-# ================================
-# Editor / OS files
-# ================================
-.vscode/*
-!.vscode/extensions.json
-.idea/
-.DS_Store
-Thumbs.db
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
-# ================================
-# Backend (Python)
-# ================================
-.venv/
-venv/
-__pycache__/
-*.pyc
-instance/
-
-# Database files
+*.sqlite
+*.sqlite3
 *.db
 *.db-shm
 *.db-wal
 
-# Migrations cache only (keep migrations!)
-migrations/versions/
-
 # ================================
-# Runtime / Data caches
+# Frontend (Node / Vite / React)
 # ================================
+node_modules/
+dist/
+build/
+dist-ssr/
+.vite/
+.next/
+.nuxt/
+.output/
 .cache/
-**/.cache/
-fastf1_cache/
-*.pickle
+.parcel-cache/
+.eslintcache
+*.local
 
-# Testing
-.pytest_cache/
+# ================================
+# Backend (Python / Flask)
+# ================================
+.venv/
+venv/
+env/
+ENV/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+.eggs/
+instance/
+.webassets-cache
+.mypy_cache/
+.ruff_cache/
+.coverage
 htmlcov/
 coverage.xml
+.pytest_cache/
+.hypothesis/
+
+# ================================
+# FastF1 / Data Caching
+# ================================
+fastf1_cache/
+*.pickle
+*.pkl
+cache/
+
+# ================================
+# Environment Variables (CRITICAL)
+# ================================
+.env
+.env.local
+.env.*.local
+.flaskenv
+
+# ================================
+# Editor / IDE / OS
+# ================================
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# ================================
+# Project Specific / Temp
+# ================================
+measure_latency.py
+check_driver.py
+seed_db.py
+*.tmp
+*.bak
+MEASUREMENTS.txt
+

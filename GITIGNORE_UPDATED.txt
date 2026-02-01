@@ -1,0 +1,2 @@
+Gitignore updated.
+Excludes: node_modules, venv, .env, __pycache__, fastf1_cache, dist, build.
