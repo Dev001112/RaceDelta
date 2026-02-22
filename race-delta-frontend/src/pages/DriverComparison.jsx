@@ -48,16 +48,16 @@ export default function DriverComparison() {
   const [error, setError] = useState("");
 
   /* -------------------------------
-     Load drivers ONCE
+     Load drivers when season changes
 -------------------------------- */
   useEffect(() => {
-    client.fetchDrivers()
+    client.fetchDrivers(season)
       .then(setDrivers)
       .catch((err) => {
         console.error(err);
         setError("Failed to load drivers");
       });
-  }, []);
+  }, [season]);
 
   const d1 = drivers.find(d => d.code === driver1);
   const d2 = drivers.find(d => d.code === driver2);

@@ -19,19 +19,19 @@ TEAM_META_BASE = {
     "audi": {"principal": "Mattia Binotto", "engine": "Audi"} # Future proofing
 }
 
-# Yearly specific data (Cars, Images)
+# Yearly specific data (Cars)
 TEAM_YEARLY = {
     2024: {
-        "red_bull": {"car": "RB20", "car_image": "https://media.formula1.com/image/upload/f_auto/q_auto/v1708092248/f1/cars/2024/Red_Bull_Racing.png"},
-        "ferrari": {"car": "SF-24", "car_image": "https://media.formula1.com/image/upload/f_auto/q_auto/v1708092248/f1/cars/2024/Ferrari.png"},
-        "mercedes": {"car": "W15", "car_image": "https://media.formula1.com/image/upload/f_auto/q_auto/v1708092248/f1/cars/2024/Mercedes.png"},
-        "mclaren": {"car": "MCL38", "car_image": "https://media.formula1.com/image/upload/f_auto/q_auto/v1708092248/f1/cars/2024/McLaren_FK4.png"},
-        "aston_martin": {"car": "AMR24", "car_image": "https://media.formula1.com/image/upload/f_auto/q_auto/v1708092248/f1/cars/2024/Aston_Martin.png"},
-        "alpine": {"car": "A524", "car_image": "https://media.formula1.com/image/upload/f_auto/q_auto/v1708092248/f1/cars/2024/Alpine.png"},
-        "williams": {"car": "FW46", "car_image": "https://media.formula1.com/image/upload/f_auto/q_auto/v1708092248/f1/cars/2024/Williams.png"},
-        "haas": {"car": "VF-24", "car_image": "https://media.formula1.com/image/upload/f_auto/q_auto/v1708092248/f1/cars/2024/Haas.png"},
-        "rb": {"car": "VCARB 01", "car_image": "https://media.formula1.com/image/upload/f_auto/q_auto/v1708092248/f1/cars/2024/RB.png"},
-        "sauber": {"car": "C44", "car_image": "https://media.formula1.com/image/upload/f_auto/q_auto/v1708092248/f1/cars/2024/Kick_Sauber.png"}
+        "red_bull": {"car": "RB20"},
+        "ferrari": {"car": "SF-24"},
+        "mercedes": {"car": "W15"},
+        "mclaren": {"car": "MCL38"},
+        "aston_martin": {"car": "AMR24"},
+        "alpine": {"car": "A524"},
+        "williams": {"car": "FW46"},
+        "haas": {"car": "VF-24"},
+        "rb": {"car": "VCARB 01"},
+        "sauber": {"car": "C44"}
     },
     2025: {
         "red_bull": {"car": "RB21"},
@@ -78,7 +78,28 @@ TEAM_ALIASES = {
     "alfa_romeo_racing": "sauber",
     "kick_sauber": "sauber",
     "stake_f1_team_kick_sauber": "sauber",
-    "audi": "sauber"
+    "audi": "sauber",
+    "mclaren": "mclaren",
+    "mercedes": "mercedes",
+    "ferrari": "ferrari",
+    "williams": "williams",
+    "alpine": "alpine",
+    "aston_martin": "aston_martin",
+    "haas": "haas"
+}
+
+CDN_SLUG_MAP = {
+    "red_bull": "redbullracing",
+    "ferrari": "ferrari",
+    "mercedes": "mercedes",
+    "mclaren": "mclaren",
+    "aston_martin": "astonmartin",
+    "alpine": "alpine",
+    "williams": "williams",
+    "haas": "haasf1team",
+    "rb": "racingbulls",
+    "sauber": "kicksauber",
+    "audi": "audi"
 }
 
 def get_team_meta(constructor_id, season=None):
@@ -101,16 +122,19 @@ def get_team_meta(constructor_id, season=None):
         year = 2024
 
     # Get Yearly Data
-    # If explicit year missing, fall back to 2024 (has images)
     season_data = TEAM_YEARLY.get(year, TEAM_YEARLY.get(2024, {})).get(team_key, {})
     
-    # If the specific season doesn't have an image, try to fallback to 2024 image
-    # so we don't show blank 
-    if "car_image" not in season_data and year != 2024:
-        fallback_img = TEAM_YEARLY.get(2024, {}).get(team_key, {}).get("car_image")
-        if fallback_img:
-            season_data["car_image"] = fallback_img
+    # Dynamic F1 CDN URL Generation
+    slug = CDN_SLUG_MAP.get(team_key)
+    if slug:
+        # F1 introduced a new CDN structure and relies on fallback properties for new/unrevealed cars
+        if year >= 2026:
+            fallback = f"d_common:f1:{year}:fallback:car:{year}fallbackcarright.webp/"
+        else:
+            fallback = ""
             
+        season_data["car_image"] = f"https://media.formula1.com/image/upload/c_lfill,w_512/q_auto/{fallback}v1740000000/common/f1/{year}/{slug}/{year}{slug}carright.webp"
+
     # Merge
     base.update(season_data)
     

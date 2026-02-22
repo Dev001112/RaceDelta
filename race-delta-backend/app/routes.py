@@ -93,7 +93,22 @@ def drivers_list():
     try:
         # Get season information
         seasons_data = resolve_seasons()
-        season_for_drivers = get_season_for_drivers()
+        requested_season = request.args.get("season")
+        
+        if requested_season:
+            season_for_drivers = int(requested_season)
+        else:
+            season_for_drivers = get_season_for_drivers()
+            
+        # If requesting a historical season that is not the current calendar or display season,
+        # skip OpenF1's current roster index and use the historical service directly.
+        is_historical = season_for_drivers not in [seasons_data["calendar_season"], seasons_data["display_season"]]
+        if is_historical:
+            # Use fallback system for historical data
+            drivers_data = get_season_drivers(year=season_for_drivers)
+            drivers_data["season"] = season_for_drivers
+            drivers_data["is_offseason"] = False
+            return jsonify(drivers_data)
         
         # Get drivers from OpenF1 (roster-based, not race-dependent)
         openf1_base = get_openf1_base()
@@ -142,6 +157,9 @@ def drivers_list():
         # Sort by driver number (nulls last)
         drivers.sort(key=lambda d: d["driver_number"] if d["driver_number"] is not None else 999)
         
+        if not drivers:
+            raise ValueError("OpenF1 returned empty roster")
+        
         return jsonify({
             "source": "openf1_roster",
             "season": season_for_drivers,
@@ -158,9 +176,14 @@ def drivers_list():
         
         # Fallback to existing service
         try:
-            drivers_data = get_season_drivers(year=int(get_season_for_drivers()))
-            seasons_data = resolve_seasons()
-            drivers_data["season"] = get_season_for_drivers()
+            drivers_data = get_season_drivers(year=season_for_drivers)
+            
+            # If the fallback is also empty (e.g. because there are no completed races yet),
+            # and we are in the current or future season, use the previous season's roster.
+            if not drivers_data.get("drivers") and season_for_drivers >= seasons_data["calendar_season"]:
+                drivers_data = get_season_drivers(year=season_for_drivers - 1)
+                
+            drivers_data["season"] = season_for_drivers
             drivers_data["is_offseason"] = seasons_data["is_offseason"]
             return jsonify(drivers_data)
         except Exception as fallback_error:
@@ -212,14 +235,26 @@ def constructor_standings():
 @api_bp.route("/teams/<constructor_id>", methods=["GET"])
 def team_detail(constructor_id):
     try:
-        season = request.args.get("season")
-        if not season:
-            season = resolve_seasons()["display_season"]
+        seasons_data = resolve_seasons()
+        requested_season = request.args.get("season")
+        if not requested_season:
+            season = seasons_data["display_season"]
+        else:
+            season = int(requested_season)
         
         standings = ergast.get_constructor_standings(
             season=season,
             round="last"
         )
+        
+        # Fallback to previous season if no constructor data is available for the requested season 
+        # (e.g. at the start of a new season when no races have been completed)
+        if (not standings.content or standings.content[0].empty) and season >= seasons_data["calendar_season"]:
+            season = season - 1
+            standings = ergast.get_constructor_standings(
+                season=season,
+                round="last"
+            )
 
         if not standings.content or standings.content[0].empty:
             return jsonify({"error": "No constructor data"}), 404

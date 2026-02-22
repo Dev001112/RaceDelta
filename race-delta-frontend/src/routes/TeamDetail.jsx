@@ -1,20 +1,35 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { fetchTeamDetail } from "../api/client";
+import client, { fetchTeamDetail } from "../api/client";
 import { TEAM_LOGOS } from "../lib/teamLogos";
+import { useSeason } from "../context/SeasonContext";
 
 export default function TeamDetail() {
   const { constructorId } = useParams();
   const navigate = useNavigate();
+  const { displaySeason } = useSeason();
+
   const [team, setTeam] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [driversMap, setDriversMap] = useState({});
 
   useEffect(() => {
+    // Cross-reference driver headshots from the global drivers endpoint
+    client.fetchDrivers(displaySeason)
+      .then(drivers => {
+        const map = {};
+        drivers.forEach(d => {
+          if (d.number) map[String(d.number)] = d.photo;
+        });
+        setDriversMap(map);
+      })
+      .catch(e => console.error("Failed to fetch drivers for headshots:", e));
+
     fetchTeamDetail(constructorId)
       .then(setTeam)
       .catch((e) => console.error("Team detail fetch error:", e))
       .finally(() => setLoading(false));
-  }, [constructorId]);
+  }, [constructorId, displaySeason]);
 
   if (loading) {
     return (
@@ -102,32 +117,36 @@ export default function TeamDetail() {
           <h3 className="text-xl font-bold text-white mb-6">Driver Lineup</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {team.drivers.length ? (
-              team.drivers.map((d) => (
-                <div
-                  key={d.code}
-                  className="bg-[#0f172a] p-6 rounded-2xl border border-white/10 flex items-center gap-6 hover:border-blue-500/50 transition-colors group"
-                >
-                  {d.headshot_url ? (
-                    <img
-                      src={d.headshot_url}
-                      alt={d.name}
-                      className="w-20 h-20 rounded-full object-cover border-2 border-white/10 group-hover:border-blue-500 transition-colors"
-                    />
-                  ) : (
-                    <div className="w-20 h-20 rounded-full bg-slate-800 flex items-center justify-center text-xs text-slate-500">
-                      No Photo
-                    </div>
-                  )}
+              team.drivers.map((d) => {
+                const headshot = d.headshot_url || driversMap[String(d.driver_number)];
 
-                  <div>
-                    <div className="text-3xl font-bold text-white/10 absolute right-6 top-1/2 -translate-y-1/2 group-hover:text-white/20 transition-colors select-none">
-                      {d.driver_number}
+                return (
+                  <div
+                    key={d.driver_number}
+                    className="bg-[#0f172a] p-6 rounded-2xl border border-white/10 flex items-center gap-6 hover:border-blue-500/50 transition-colors group"
+                  >
+                    {headshot ? (
+                      <img
+                        src={headshot}
+                        alt={d.name}
+                        className="w-20 h-20 rounded-full object-cover border-2 border-white/10 group-hover:border-blue-500 transition-colors"
+                      />
+                    ) : (
+                      <div className="w-20 h-20 rounded-full bg-slate-800 flex items-center justify-center text-xs text-slate-500">
+                        No Photo
+                      </div>
+                    )}
+
+                    <div>
+                      <div className="text-3xl font-bold text-white/10 absolute right-6 top-1/2 -translate-y-1/2 group-hover:text-white/20 transition-colors select-none">
+                        {d.driver_number}
+                      </div>
+                      <div className="text-xl font-bold text-white relative z-10">{d.name}</div>
+                      <div className="text-blue-400 text-sm font-medium">Racing Driver</div>
                     </div>
-                    <div className="text-xl font-bold text-white relative z-10">{d.name}</div>
-                    <div className="text-blue-400 text-sm font-medium">Racing Driver</div>
                   </div>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div className="col-span-2 text-slate-500 italic">No drivers announced yet.</div>
             )}
