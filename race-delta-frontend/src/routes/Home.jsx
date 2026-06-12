@@ -5,29 +5,14 @@ import client from "../api/client";
 import { getTeamColor } from "../lib/teamMeta";
 import { Zap, GitCompare, Trophy, Calendar, ChevronRight } from "lucide-react";
 
-// F1 2024 / 2025 Calendar Schedule (Essential broadcast reference)
-const F1_SCHEDULE = [
-  { round: 1, race: "Bahrain GP", circuit: "Sakhir", date: "COMPLETED", winner: "VER" },
-  { round: 2, race: "Saudi Arabian GP", circuit: "Jeddah", date: "COMPLETED", winner: "VER" },
-  { round: 3, race: "Australian GP", circuit: "Melbourne", date: "COMPLETED", winner: "SAI" },
-  { round: 4, race: "Japanese GP", circuit: "Suzuka", date: "COMPLETED", winner: "VER" },
-  { round: 5, race: "Chinese GP", circuit: "Shanghai", date: "COMPLETED", winner: "VER" },
-  { round: 6, race: "Miami GP", circuit: "Miami", date: "COMPLETED", winner: "NOR" },
-  { round: 7, race: "Emilia Romagna GP", circuit: "Imola", date: "COMPLETED", winner: "VER" },
-  { round: 8, race: "Monaco GP", circuit: "Monte Carlo", date: "COMPLETED", winner: "LEC" },
-  { round: 9, race: "Canadian GP", circuit: "Montreal", date: "COMPLETED", winner: "VER" },
-  { round: 10, race: "Spanish GP", circuit: "Barcelona", date: "COMPLETED", winner: "VER" },
-  { round: 11, race: "Austrian GP", circuit: "Spielberg", date: "COMPLETED", winner: "RUS" },
-  { round: 12, race: "British GP", circuit: "Silverstone", date: "COMPLETED", winner: "HAM" },
-  { round: 13, race: "Hungarian GP", circuit: "Budapest", date: "COMPLETED", winner: "PIA" },
-  { round: 14, race: "Belgian GP", circuit: "Spa-Francorchamps", date: "COMPLETED", winner: "HAM" },
-];
+
 
 export default function Home() {
   const navigate = useNavigate();
   const { season, isOffseason } = useSeason();
 
   const [drivers, setDrivers] = useState([]);
+  const [schedule, setSchedule] = useState([]);
   const [driverStandings, setDriverStandings] = useState([]);
   const [constructorStandings, setConstructorStandings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -36,6 +21,27 @@ export default function Home() {
   // Compare widget state
   const [compareD1, setCompareD1] = useState("");
   const [compareD2, setCompareD2] = useState("");
+
+  // Dynamically order schedule starting from the latest completed GP (going backward), followed by upcoming ones (going forward)
+  const getOrderedSchedule = () => {
+    if (!schedule || schedule.length === 0) return [];
+
+    // Filter out cancelled meetings
+    const activeRaces = schedule.filter((r) => !r.is_cancelled);
+
+    // Completed races: is_completed is true
+    const completed = activeRaces.filter((r) => r.is_completed);
+    // Upcoming races: is_completed is false
+    const upcoming = activeRaces.filter((r) => !r.is_completed);
+
+    // Sort completed in reverse chronological order (latest first)
+    const completedSorted = [...completed].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // Sort upcoming in chronological order (closest first)
+    const upcomingSorted = [...upcoming].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    return [...completedSorted, ...upcomingSorted];
+  };
 
   useEffect(() => {
     if (!season) return;
@@ -46,11 +52,13 @@ export default function Home() {
       client.fetchDrivers(season),
       client.fetchDriverStandings(season),
       client.fetchConstructorStandings(season),
+      client.fetchRaces(season),
     ])
-      .then(([driversList, driverRes, constructorRes]) => {
+      .then(([driversList, driverRes, constructorRes, racesList]) => {
         setDrivers(driversList || []);
         setDriverStandings(driverRes.standings || []);
         setConstructorStandings(constructorRes.standings || []);
+        setSchedule(racesList || []);
         setLoading(false);
       })
       .catch((err) => {
@@ -134,10 +142,11 @@ export default function Home() {
         </div>
         
         <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-white/10">
-          {F1_SCHEDULE.map((s) => (
+          {getOrderedSchedule().map((s) => (
             <div
               key={s.round}
-              className="flex-none w-[170px] bg-[#121518] border border-[#22272c] p-3 text-xs font-broadcast relative"
+              onClick={() => navigate(`/race/${season}/${s.round}`)}
+              className="flex-none w-[170px] bg-[#121518] border border-[#22272c] hover:border-[#ff1801] p-3 text-xs font-broadcast relative cursor-pointer hover:bg-[#1a1e22] transition-all"
             >
               <div className="absolute top-0 right-0 px-1.5 py-0.5 bg-white/5 text-[9px] font-bold text-slate-500">
                 R{s.round}
