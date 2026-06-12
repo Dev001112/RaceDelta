@@ -14,6 +14,7 @@ from scripts.ergast_standings import (
 )
 
 from app.services.f1_service import get_season_drivers, normalize_team
+from app.services import cache_store
 from app.services.driver_comparison_fastf1 import compare_drivers_season
 from app.services.l1_season_fastf1 import (
     get_driver_season_metrics,
@@ -42,6 +43,34 @@ ergast = Ergast()
 def get_openf1_base():
     """Get OpenF1 API base URL from Flask config"""
     return current_app.config.get("OPENF1_BASE", "https://api.openf1.org/v1")
+
+
+def cached_openf1_get(path, params=None, ttl=60 * 60 * 6):
+    openf1_base = get_openf1_base()
+    timeout = min(current_app.config.get("OPENF1_TIMEOUT", 10), 4)
+    url = f"{openf1_base.rstrip('/')}/{path.lstrip('/')}"
+    normalized_params = dict(sorted((params or {}).items()))
+    cache_key = f"{url}:{normalized_params}"
+    cached = cache_store.get("openf1", cache_key)
+    if cached is not None:
+        return cached
+
+    try:
+        resp = requests.get(url, params=params, timeout=timeout)
+    except requests.RequestException:
+        return None
+
+    if not resp.ok:
+        return None
+    data = resp.json()
+    cache_store.set("openf1", cache_key, data, ttl)
+    return data
+
+
+def resolve_request_season(raw_season):
+    if not raw_season or raw_season == "current":
+        return resolve_seasons()["display_season"]
+    return int(raw_season)
 
 # ==================================================
 # HEALTH CHECK
@@ -95,10 +124,7 @@ def drivers_list():
         seasons_data = resolve_seasons()
         requested_season = request.args.get("season")
         
-        if requested_season:
-            season_for_drivers = int(requested_season)
-        else:
-            season_for_drivers = get_season_for_drivers()
+        season_for_drivers = resolve_request_season(requested_season)
             
         # If requesting a historical season that is not the current calendar or display season,
         # skip OpenF1's current roster index and use the historical service directly.
@@ -111,20 +137,15 @@ def drivers_list():
             return jsonify(drivers_data)
         
         # Get drivers from OpenF1 (roster-based, not race-dependent)
-        openf1_base = get_openf1_base()
-        timeout = current_app.config.get("OPENF1_TIMEOUT", 10)
-        
         # Fetch drivers from OpenF1 driver index
-        resp = requests.get(f"{openf1_base}/drivers", timeout=timeout)
+        openf1_drivers = cached_openf1_get("drivers")
         
-        if not resp.ok:
+        if openf1_drivers is None:
             # Fallback to existing service if OpenF1 fails
             drivers_data = get_season_drivers(year=int(season_for_drivers))
             drivers_data["season"] = season_for_drivers
             drivers_data["is_offseason"] = seasons_data["is_offseason"]
             return jsonify(drivers_data)
-        
-        openf1_drivers = resp.json()
         
         # Filter and normalize drivers
         # OpenF1 driver index contains current season roster
@@ -202,8 +223,7 @@ def drivers_list():
 @api_bp.route("/teams", methods=["GET"])
 def teams_list():
     season = request.args.get("season")
-    if not season:
-        season = resolve_seasons()["display_season"]
+    season = resolve_request_season(season)
     return jsonify(get_f1_teams(season=season))
 
 # ==================================================
@@ -213,8 +233,7 @@ def teams_list():
 @api_bp.route("/standings/drivers", methods=["GET"])
 def driver_standings():
     season = request.args.get("season")
-    if not season:
-        season = resolve_seasons()["display_season"]
+    season = resolve_request_season(season)
     return jsonify(get_driver_standings(season=season))
 
 # ==================================================
@@ -224,8 +243,7 @@ def driver_standings():
 @api_bp.route("/standings/constructors", methods=["GET"])
 def constructor_standings():
     season = request.args.get("season")
-    if not season:
-        season = resolve_seasons()["display_season"]
+    season = resolve_request_season(season)
     return jsonify(get_constructor_standings(season=season))
 
 # ==================================================
@@ -241,53 +259,31 @@ def team_detail(constructor_id):
             season = seasons_data["display_season"]
         else:
             season = int(requested_season)
+        # Load teams list securely with OpenF1 fallback logic automatically
+        from scripts.ergast_teams import get_f1_teams
+        teams_list = get_f1_teams(season=season)
         
-        standings = ergast.get_constructor_standings(
-            season=season,
-            round="last"
-        )
+        team = next((t for t in teams_list if t.get("constructor_id") == constructor_id), None)
         
-        # Fallback to previous season if no constructor data is available for the requested season 
-        # (e.g. at the start of a new season when no races have been completed)
-        if (not standings.content or standings.content[0].empty) and season >= seasons_data["calendar_season"]:
-            season = season - 1
-            standings = ergast.get_constructor_standings(
-                season=season,
-                round="last"
-            )
-
-        if not standings.content or standings.content[0].empty:
-            return jsonify({"error": "No constructor data"}), 404
-
-        df_teams = standings.content[0]
-        team_row = df_teams[df_teams["constructorId"] == constructor_id]
-
-        if team_row.empty:
+        if not team:
             return jsonify({"error": "Team not found"}), 404
 
-        team = team_row.iloc[0]
+        team_name = team.get("team_name")
+        nationality = team.get("nationality")
 
-        team_name = team.get("constructorName")
-        nationality = team.get("constructorNationality")
-
-        # ---- Headshot Logic (Unified)
-        # Use our robust service that handles caching and fallbacks
+        # ---- Headshot Logic & Driver Loading (Unified)
+        # Use our robust service that handles caching and fallbacks (via OpenF1/FastF1 roster)
         headshot_map = {}
+        all_drivers_data = {}
         try:
-            # We want the 'active' driver list which contains headshots
-            # resolve_seasons() to safely determine year for drivers (usually 2025/2026)
-            s_data = resolve_seasons()
-            # If 2026 is active but empty, we want 2025. This logic is inside get_season_drivers usually
-            # But let's be explicit:
-            target_year = s_data['display_season']
-            
-            # Fetch all drivers for the season using our service
+            target_year = season
+            # Fetch all drivers for the specific season using our service
             all_drivers_data = get_season_drivers(year=target_year)
             
             # Create a map: Code -> Headshot URL
             if "drivers" in all_drivers_data:
                  for d in all_drivers_data["drivers"]:
-                     c = d.get("driver_code") or d.get("code") # Handle both schemas
+                     c = d.get("driver_code") or d.get("code")
                      url = d.get("headshot_url")
                      if c and url:
                          headshot_map[c] = url
@@ -299,35 +295,26 @@ def team_detail(constructor_id):
         drivers = []
         seen = set()
 
-        driver_standings = ergast.get_driver_standings(
-            season=season,
-            round="last"
-        )
-
-        if driver_standings.content and not driver_standings.content[0].empty:
-            df_drivers = driver_standings.content[0]
-
-            constructor_ids = df_drivers["constructorIds"].apply(
-                lambda x: x[0] if isinstance(x, list) and x else None
-            )
-
-            team_drivers_df = df_drivers[constructor_ids == constructor_id]
-
-            for _, row in team_drivers_df.iterrows():
-                code = row.get("driverCode")
-
-                if not code or code in seen:
-                    continue
-                seen.add(code)
-
-                drivers.append({
-                    "name": f"{row['givenName']} {row['familyName']}".strip(),
-                    "driver_number": row.get("driverNumber"),
-                    "headshot_url": headshot_map.get(code)
-                })
-
-                if len(drivers) == 2:
-                    break
+        if "drivers" in all_drivers_data:
+            for row in all_drivers_data["drivers"]:
+                team_check = row.get("team", "")
+                
+                # Match driver's team to the current team requested
+                if team_check.lower() == team_name.lower():
+                    code = row.get("driver_code") or row.get("code", "")
+                    
+                    if not code or code in seen:
+                        continue
+                    seen.add(code)
+                    
+                    drivers.append({
+                        "name": row.get("driver_name") or row.get("full_name", ""),
+                        "driver_number": row.get("driver_number"),
+                        "headshot_url": headshot_map.get(code)
+                    })
+                    
+                    if len(drivers) == 2:
+                        break
 
         meta = get_team_meta(constructor_id, season)
 
@@ -426,11 +413,9 @@ def l1_season():
         }
 
         try:
-            openf1_base = get_openf1_base()
-            timeout = current_app.config.get("OPENF1_TIMEOUT", 10)
-            resp = requests.get(f"{openf1_base}/drivers", timeout=timeout)
-            if resp.ok:
-                for d in resp.json():
+            drivers = cached_openf1_get("drivers") or []
+            if drivers:
+                for d in drivers:
                     if d.get("name_acronym") == teammate_code:
                         teammate_meta["name"] = (
                             f"{d.get('first_name','')} {d.get('last_name','')}".strip()
@@ -462,10 +447,10 @@ def compare_drivers():
     driver2 = request.args.get("driver2")
     season = request.args.get("season")
 
-    if season == "current" or not season:
-        season = resolve_seasons()["display_season"]
-    else:
-        season = int(season)
+    if not driver1 or not driver2:
+        return jsonify({"error": "driver1 and driver2 required"}), 400
+
+    season = resolve_request_season(season)
 
     try:
         return jsonify(compare_drivers_season(driver1, driver2, season))
@@ -482,8 +467,7 @@ def compare_drivers_timeline():
     driver2 = request.args.get("driver2")
     season = request.args.get("season", "current")
 
-    if season == "current":
-        season = resolve_seasons()["display_season"]
+    season = resolve_request_season(season)
 
     if not driver1 or not driver2:
         return jsonify({"error": "driver1 and driver2 required"}), 400

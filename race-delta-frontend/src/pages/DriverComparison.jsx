@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import client from "../api/client";
 
 import DriverSelect from "../components/DriverSelect";
@@ -27,19 +28,30 @@ import { useSeason } from "../context/SeasonContext";
 
 export default function DriverComparison() {
   const { seasonOptions, displaySeason } = useSeason();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [drivers, setDrivers] = useState([]);
 
-  const [driver1, setDriver1] = useState("");
-  const [driver2, setDriver2] = useState("");
-  // Default to displaySeason if available, otherwise "current" (or let useEffect sync it)
-  const [season, setSeason] = useState(displaySeason || "current");
+  const paramD1 = searchParams.get("d1") || "";
+  const paramD2 = searchParams.get("d2") || "";
+  const paramSeason = searchParams.get("season") || "";
 
-  // Sync local season with context when it loads
+  const [driver1, setDriver1] = useState(paramD1);
+  const [driver2, setDriver2] = useState(paramD2);
+  const [season, setSeason] = useState(paramSeason || displaySeason || "current");
+
+  // Sync state with URL parameter updates
   useEffect(() => {
-    if (displaySeason) {
+    if (paramD1) setDriver1(paramD1);
+    if (paramD2) setDriver2(paramD2);
+    if (paramSeason) setSeason(paramSeason);
+  }, [paramD1, paramD2, paramSeason]);
+
+  // Sync season with displaySeason if no custom season param exists
+  useEffect(() => {
+    if (displaySeason && !paramSeason) {
       setSeason(displaySeason);
     }
-  }, [displaySeason]);
+  }, [displaySeason, paramSeason]);
 
   const [comparison, setComparison] = useState(null);
   const [timeline, setTimeline] = useState(null);
@@ -62,8 +74,47 @@ export default function DriverComparison() {
   const d1 = drivers.find(d => d.code === driver1);
   const d2 = drivers.find(d => d.code === driver2);
 
+  // Core comparison fetcher
+  async function runComparison(d1Code, d2Code, seasonYear) {
+    try {
+      setLoading(true);
+      setError("");
+      setComparison(null);
+      setTimeline(null);
+
+      const statsRes = await client.fetchDriverComparison({
+        driver1: d1Code,
+        driver2: d2Code,
+        season: seasonYear
+      });
+
+      setComparison(normalizeComparison(statsRes, d1Code, d2Code));
+
+      const timelineRes = await client.fetchDriverTimeline({
+        driver1: d1Code,
+        driver2: d2Code,
+        season: seasonYear
+      });
+
+      setTimeline(timelineRes);
+
+    } catch (err) {
+      console.error(err);
+      setError("Failed to compare drivers");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Auto-trigger comparison when drivers list is loaded and we have deep-linked params
+  useEffect(() => {
+    if (drivers.length > 0 && driver1 && driver2 && !comparison && !loading) {
+      runComparison(driver1, driver2, season);
+    }
+  }, [drivers, driver1, driver2, season]);
+
   /* -------------------------------
-     Compare action
+     Compare action from manual click
 -------------------------------- */
   async function handleCompare() {
     if (!driver1 || !driver2) {
@@ -76,34 +127,11 @@ export default function DriverComparison() {
       return;
     }
 
-    try {
-      setLoading(true);
-      setError("");
-      setComparison(null);
-      setTimeline(null);
-
-      const statsRes = await client.fetchDriverComparison({
-        driver1,
-        driver2,
-        season
-      });
-
-      setComparison(normalizeComparison(statsRes, driver1, driver2));
-
-      const timelineRes = await client.fetchDriverTimeline({
-        driver1,
-        driver2,
-        season
-      });
-
-      setTimeline(timelineRes);
-
-    } catch (err) {
-      console.error(err);
-      setError("Failed to compare drivers");
-    } finally {
-      setLoading(false);
-    }
+    // Update URL params
+    setSearchParams({ d1: driver1, d2: driver2, season });
+    
+    // Run comparison
+    await runComparison(driver1, driver2, season);
   }
 
   /* -------------------------------

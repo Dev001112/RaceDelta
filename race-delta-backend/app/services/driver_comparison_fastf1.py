@@ -1,6 +1,8 @@
 import fastf1
 from datetime import datetime
 import os
+import math
+from app.services import cache_store
 
 # --------------------------------------------------
 # FASTF1 CACHE SETUP (SAFE, IDEMPOTENT)
@@ -13,6 +15,8 @@ try:
     fastf1.Cache.enable_cache(CACHE_DIR)
 except Exception:
     pass  # cache already enabled
+
+DERIVED_CACHE_TTL = int(os.getenv("FASTF1_DERIVED_CACHE_TTL", "21600"))
 
 # --------------------------------------------------
 # HELPERS
@@ -43,12 +47,17 @@ def compare_drivers_season(driver1: str, driver2: str, season: int):
     Uses FastF1 only (NO Ergast)
     """
 
+    cache_key = f"compare_latest:v2:{season}:{driver1.upper()}:{driver2.upper()}"
+    cached = cache_store.get("derived", cache_key)
+    if cached is not None:
+        return cached
+
     event_name = get_latest_completed_event(season)
     if not event_name:
         raise RuntimeError("No completed race found")
 
     session = fastf1.get_session(season, event_name, "RACE")
-    session.load()
+    session.load(laps=True, telemetry=False, weather=False, messages=False)
 
     laps = session.laps
 
@@ -58,14 +67,22 @@ def compare_drivers_season(driver1: str, driver2: str, season: int):
     if a.empty or b.empty:
         raise RuntimeError("Missing lap data for one or both drivers")
 
+    def safe_float(value):
+        try:
+            value = float(value)
+            return round(value, 3) if math.isfinite(value) else None
+        except Exception:
+            return None
+
     def metrics(df):
+        lap_seconds = df["LapTime"].dt.total_seconds().dropna()
         return {
-            "avg_lap_time": round(df["LapTime"].dt.total_seconds().mean(), 3),
-            "best_lap_time": round(df["LapTime"].dt.total_seconds().min(), 3),
-            "laps": int(len(df))
+            "avg_lap_time": safe_float(lap_seconds.mean()),
+            "best_lap_time": safe_float(lap_seconds.min()),
+            "laps": int(len(lap_seconds))
         }
 
-    return {
+    payload = {
         "season": season,
         "event": event_name,
         "drivers": {
@@ -74,3 +91,5 @@ def compare_drivers_season(driver1: str, driver2: str, season: int):
         },
         "source": "fastf1"
     }
+    cache_store.set("derived", cache_key, payload, DERIVED_CACHE_TTL)
+    return payload

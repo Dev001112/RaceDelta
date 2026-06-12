@@ -32,10 +32,19 @@ export default function Teams() {
   }
 
   return (
-    <div className="p-6">
-      <h2 className="text-white text-2xl font-bold mb-6">Teams</h2>
+    <div className="py-8 space-y-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-[#22272c] pb-4">
+        <div>
+          <h2 className="text-4xl font-black italic uppercase text-white font-broadcast tracking-tight">
+            Constructor Championship <span className="text-slate-400">//{season}</span>
+          </h2>
+          <p className="text-slate-400 mt-1.5 text-sm">
+            F1 constructor standings, points accumulation, and factory profiles.
+          </p>
+        </div>
+      </div>
 
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
         {teams.map((team) => (
           <TeamCard
             key={team.constructor_id}

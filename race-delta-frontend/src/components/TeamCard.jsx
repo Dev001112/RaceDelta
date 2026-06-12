@@ -1,108 +1,69 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { TEAM_LOGOS } from "../lib/teamLogos";
-
-/* ---------------------------------------
-   Normalize team names for logo mapping
----------------------------------------- */
-const normalizeTeamName = (name) => {
-  if (!name) return name;
-
-  if (name.includes("Red Bull")) return "Red Bull";
-  if (name.includes("Mercedes")) return "Mercedes";
-  if (name.includes("Ferrari")) return "Ferrari";
-  if (name.includes("McLaren")) return "McLaren";
-  if (name.includes("Aston")) return "Aston Martin";
-  if (name.includes("Alpine")) return "Alpine F1 Team";
-  if (name.includes("Williams")) return "Williams";
-  if (name.includes("Haas")) return "Haas F1 Team";
-  if (name.includes("RB")) return "RB F1 Team";
-  if (name.includes("Sauber")) return "Sauber";
-
-  return name;
-};
+import { getTeamColor } from "../lib/teamMeta";
 
 function TeamCard({ team }) {
   const navigate = useNavigate();
   if (!team) return null;
 
-  const normalizedName = normalizeTeamName(team.team_name);
-  const logo = TEAM_LOGOS[normalizedName];
+  const teamColor = getTeamColor(team.team_name || team.constructor_id);
+  const logo = TEAM_LOGOS[team.team_name] || TEAM_LOGOS[team.constructor_id] || null;
 
   return (
     <div
       onClick={() => navigate(`/teams/${team.constructor_id}`)}
+      className="bg-[#0d0f11] border border-[#22272c] p-4 flex flex-col justify-between cursor-pointer group hover:bg-[#121518] transition-colors relative"
       style={{
-        borderRadius: 12,
-        padding: 14,
-        background:
-          "linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))",
-        border: "1px solid rgba(255,255,255,0.06)",
-        display: "flex",
-        flexDirection: "column",
-        gap: 10,
-        minHeight: 170,
-        cursor: "pointer"
+        borderLeft: `4px solid ${teamColor}`,
+        minHeight: 150
       }}
     >
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      <div className="flex items-center gap-3">
         {/* Logo */}
         {logo ? (
           <img
             src={logo}
             alt={team.team_name}
-            style={{
-              width: 56,
-              height: 56,
-              objectFit: "contain",
-              background: "#111",
-              borderRadius: 8,
-              padding: 6
-            }}
+            className="w-14 h-14 object-contain bg-[#121518] border border-[#22272c] p-1.5"
             onError={(e) => (e.currentTarget.style.display = "none")}
           />
         ) : (
-          <div
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: 8,
-              background: "#222",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#fff",
-              fontSize: 20,
-              fontWeight: 700
-            }}
-          >
+          <div className="w-14 h-14 flex items-center justify-center bg-[#1e2329] text-white font-bold font-broadcast text-xl border border-[#22272c]">
             {team.team_name?.[0] || "?"}
           </div>
         )}
 
         {/* Team name + nationality */}
-        <div>
-          <div style={{ color: "#fff", fontWeight: 800, fontSize: 16 }}>
+        <div className="font-broadcast">
+          <div className="text-white font-black uppercase text-base italic leading-tight group-hover:text-[#ff1801] transition-colors">
             {team.team_name}
           </div>
-          <div style={{ fontSize: 12, color: "#9fb0c9" }}>
+          <div className="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5">
             {team.nationality}
           </div>
         </div>
       </div>
 
-      {/* Stats */}
-      <div style={{ fontSize: 12, color: "#9fb0c9" }}>
-        Position: <strong>{team.position}</strong>
-      </div>
+      {/* Stats horizontal strip */}
+      <div className="grid grid-cols-3 gap-2 border-t border-[#1e2329] pt-3 mt-3 font-broadcast text-center">
+        <div>
+          <div className="text-[9px] text-slate-500 uppercase tracking-wider">POS</div>
+          <div className="text-sm font-black italic text-white">
+            {team.position < 10 ? `0${team.position}` : team.position}
+          </div>
+        </div>
+        
+        <div>
+          <div className="text-[9px] text-slate-500 uppercase tracking-wider">PTS</div>
+          <div className="text-sm font-black italic text-white">{team.points}</div>
+        </div>
 
-      <div style={{ fontSize: 12, color: "#9fb0c9" }}>
-        Points: <strong>{team.points}</strong>
-      </div>
-
-      <div style={{ fontSize: 12, color: "#9fb0c9" }}>
-        Wins: <strong>{team.wins}</strong>
+        <div>
+          <div className="text-[9px] text-slate-500 uppercase tracking-wider">WINS</div>
+          <div className="text-sm font-black italic text-[#ff1801]">{team.wins}</div>
+        </div>
       </div>
     </div>
   );

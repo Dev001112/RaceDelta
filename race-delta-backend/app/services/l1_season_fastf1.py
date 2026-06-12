@@ -3,6 +3,8 @@
 import fastf1
 import numpy as np
 import os
+from datetime import datetime
+from app.services import cache_store
 
 # --------------------------------------------------
 # FastF1 cache (SAFE INIT)
@@ -10,6 +12,7 @@ import os
 CACHE_DIR = "fastf1_cache"
 os.makedirs(CACHE_DIR, exist_ok=True)
 fastf1.Cache.enable_cache(CACHE_DIR)
+DERIVED_CACHE_TTL = int(os.getenv("FASTF1_DERIVED_CACHE_TTL", "21600"))
 
 # --------------------------------------------------
 # HELPERS
@@ -38,10 +41,19 @@ def get_driver_season_metrics(season: int, driver_code: str):
     JSON-safe, driver-agnostic
     """
 
+    cache_key = f"l1_metrics:{season}:{driver_code.upper()}"
+    cached = cache_store.get("derived", cache_key)
+    if cached is not None:
+        return cached
+
     schedule = fastf1.get_event_schedule(season)
 
     # Exclude testing
     races = schedule[schedule["EventFormat"] != "testing"]
+    event_dates = races["EventDate"]
+    if event_dates.dt.tz is not None:
+        event_dates = event_dates.dt.tz_convert(None)
+    races = races[event_dates < datetime.utcnow()]
 
     metrics = {
         "avg_finish": None,
@@ -155,6 +167,7 @@ def get_driver_season_metrics(season: int, driver_code: str):
         if q_deltas else 0
     )
 
+    cache_store.set("derived", cache_key, metrics, DERIVED_CACHE_TTL)
     return metrics
 
 
@@ -167,8 +180,17 @@ def get_teammate_code(season: int, driver_code: str):
     Returns None safely if not found.
     """
 
+    cache_key = f"teammate:{season}:{driver_code.upper()}"
+    cached = cache_store.get("derived", cache_key)
+    if cached is not None:
+        return cached
+
     schedule = fastf1.get_event_schedule(season)
     races = schedule[schedule["EventFormat"] != "testing"]
+    event_dates = races["EventDate"]
+    if event_dates.dt.tz is not None:
+        event_dates = event_dates.dt.tz_convert(None)
+    races = races[event_dates < datetime.utcnow()]
 
     for _, event in races.iterrows():
         try:
@@ -188,9 +210,12 @@ def get_teammate_code(season: int, driver_code: str):
             ]
 
             if not teammate_rows.empty:
-                return teammate_rows.iloc[0]["Abbreviation"]
+                teammate = teammate_rows.iloc[0]["Abbreviation"]
+                cache_store.set("derived", cache_key, teammate, DERIVED_CACHE_TTL)
+                return teammate
 
         except Exception:
             continue
 
+    cache_store.set("derived", cache_key, None, DERIVED_CACHE_TTL)
     return None

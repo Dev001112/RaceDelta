@@ -21,16 +21,10 @@ export default function App() {
   const location = useLocation();
 
   return (
-    <div className="min-h-screen flex flex-col relative overflow-hidden">
-      {/* Dynamic Background */}
-      <div className="fixed inset-0 z-[-1] pointer-events-none">
-        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-blue-900/10 rounded-full blur-[120px] animate-pulse" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-cyan-900/10 rounded-full blur-[120px] animate-pulse delay-1000" />
-      </div>
-
+    <div className="min-h-screen flex flex-col bg-[#050607]">
       <Navbar />
 
-      <main className="flex-1 container mx-auto px-4 py-8 relative z-10">
+      <main className="flex-1 container py-6 sm:py-8">
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname}>
             {/* Home */}

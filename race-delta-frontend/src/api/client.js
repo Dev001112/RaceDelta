@@ -170,8 +170,9 @@ export function fetchTeams(season) {
   return safeFetch(`/api/teams${q}`);
 }
 
-export function fetchTeamDetail(constructorId) {
-  return safeFetch(`/api/teams/${constructorId}`);
+export function fetchTeamDetail(constructorId, season) {
+  const q = season ? `?season=${encodeURIComponent(season)}` : "";
+  return safeFetch(`/api/teams/${constructorId}${q}`);
 }
 
 /* --------------------------------------------------

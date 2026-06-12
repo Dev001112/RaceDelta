@@ -1,134 +1,344 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import Card from "../components/ui/Card";
-import Button from "../components/ui/Button";
-import FeaturedRaceCard from "../components/FeaturedRaceCard";
-import { ArrowRight, Activity, TrendingUp, Calendar, Zap } from "lucide-react";
+import { useSeason } from "../context/SeasonContext";
+import client from "../api/client";
+import { getTeamColor } from "../lib/teamMeta";
+import { Zap, GitCompare, Trophy, Calendar, ChevronRight } from "lucide-react";
 
-// Temporary featured races (replace later with API)
-const sampleRaces = [
-  {
-    title: "2025 Abu Dhabi GP",
-    location: "Yas Marina",
-    date: "2025-11-30",
-    winner: "Max Verstappen",
-    flag: "/src/assets/flags/uae.svg",
-  },
-  {
-    title: "2025 British GP",
-    location: "Silverstone",
-    date: "2025-07-06",
-    winner: "Lewis Hamilton",
-    flag: "/src/assets/flags/uk.svg",
-  },
+// F1 2024 / 2025 Calendar Schedule (Essential broadcast reference)
+const F1_SCHEDULE = [
+  { round: 1, race: "Bahrain GP", circuit: "Sakhir", date: "COMPLETED", winner: "VER" },
+  { round: 2, race: "Saudi Arabian GP", circuit: "Jeddah", date: "COMPLETED", winner: "VER" },
+  { round: 3, race: "Australian GP", circuit: "Melbourne", date: "COMPLETED", winner: "SAI" },
+  { round: 4, race: "Japanese GP", circuit: "Suzuka", date: "COMPLETED", winner: "VER" },
+  { round: 5, race: "Chinese GP", circuit: "Shanghai", date: "COMPLETED", winner: "VER" },
+  { round: 6, race: "Miami GP", circuit: "Miami", date: "COMPLETED", winner: "NOR" },
+  { round: 7, race: "Emilia Romagna GP", circuit: "Imola", date: "COMPLETED", winner: "VER" },
+  { round: 8, race: "Monaco GP", circuit: "Monte Carlo", date: "COMPLETED", winner: "LEC" },
+  { round: 9, race: "Canadian GP", circuit: "Montreal", date: "COMPLETED", winner: "VER" },
+  { round: 10, race: "Spanish GP", circuit: "Barcelona", date: "COMPLETED", winner: "VER" },
+  { round: 11, race: "Austrian GP", circuit: "Spielberg", date: "COMPLETED", winner: "RUS" },
+  { round: 12, race: "British GP", circuit: "Silverstone", date: "COMPLETED", winner: "HAM" },
+  { round: 13, race: "Hungarian GP", circuit: "Budapest", date: "COMPLETED", winner: "PIA" },
+  { round: 14, race: "Belgian GP", circuit: "Spa-Francorchamps", date: "COMPLETED", winner: "HAM" },
 ];
 
 export default function Home() {
   const navigate = useNavigate();
+  const { season, isOffseason } = useSeason();
+
+  const [drivers, setDrivers] = useState([]);
+  const [driverStandings, setDriverStandings] = useState([]);
+  const [constructorStandings, setConstructorStandings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  // Compare widget state
+  const [compareD1, setCompareD1] = useState("");
+  const [compareD2, setCompareD2] = useState("");
+
+  useEffect(() => {
+    if (!season) return;
+    setLoading(true);
+    setError("");
+
+    Promise.all([
+      client.fetchDrivers(season),
+      client.fetchDriverStandings(season),
+      client.fetchConstructorStandings(season),
+    ])
+      .then(([driversList, driverRes, constructorRes]) => {
+        setDrivers(driversList || []);
+        setDriverStandings(driverRes.standings || []);
+        setConstructorStandings(constructorRes.standings || []);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Dashboard data load error:", err);
+        setError("Failed to sync live broadcast feed. Reconnecting...");
+        setLoading(false);
+      });
+  }, [season]);
+
+  const handleCompareSubmit = (e) => {
+    e.preventDefault();
+    if (!compareD1 || !compareD2) return;
+    if (compareD1 === compareD2) {
+      alert("Please select two different drivers to run comparison telemetry.");
+      return;
+    }
+    navigate(`/compare/drivers?d1=${compareD1}&d2=${compareD2}&season=${season}`);
+  };
+
+  // Format driver last name to uppercase like F1 broadcast graphics
+  const formatBroadcastName = (fullName) => {
+    if (!fullName) return "";
+    const parts = fullName.trim().split(" ");
+    if (parts.length === 1) return parts[0].toUpperCase();
+    const lastName = parts.slice(1).join(" ").toUpperCase();
+    return (
+      <span>
+        {parts[0]} <span className="font-black">{lastName}</span>
+      </span>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6 pt-4">
+        {/* Loading skeleton */}
+        <div className="h-10 w-48 bg-white/5 animate-pulse" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 h-[600px] bg-white/5 animate-pulse" />
+          <div className="h-[600px] bg-white/5 animate-pulse" />
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-16 py-8">
-      {/* ================= HERO ================= */}
-      <section className="relative overflow-hidden rounded-3xl bg-[#0b0f14] border border-white/5 p-8 md:p-16">
-        {/* Background Effects */}
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-cyan-500/10 rounded-full blur-[100px] pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[100px] pointer-events-none" />
-
-        <div className="relative z-10 max-w-2xl">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-bold uppercase tracking-wider mb-6">
-              <Zap size={12} className="fill-current" />
-              Next Gen F1 Telemetry
-            </div>
-
-            <h1 className="text-5xl md:text-7xl font-bold leading-[1.1] tracking-tight mb-6 text-white">
-              Data that <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600">
-                tells the story
-              </span>
-            </h1>
-
-            <p className="text-lg text-slate-400 leading-relaxed mb-8 max-w-lg">
-              Go beyond the standings. Analyze pace, strategies, and telemetry battles with RaceDelta's advanced visual dashboard.
-            </p>
-
-            <div className="flex flex-wrap gap-4">
-              <Button onClick={() => navigate("/compare/drivers")}>
-                Compare Drivers <ArrowRight size={16} className="ml-2" />
-              </Button>
-              <Button variant="secondary" onClick={() => navigate("/teams")}>
-                Explore Teams
-              </Button>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* ================= QUICK STATS GRID ================= */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card onClick={() => navigate("/compare/drivers")} className="group">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-2 rounded-lg bg-orange-500/10 text-orange-500">
-              <Activity size={20} />
-            </div>
-            <span className="text-xs text-slate-500 font-medium bg-white/5 px-2 py-1 rounded">LIVE</span>
+    <div className="space-y-6">
+      {/* ================= BROADCAST TOP SUB-HEADER ================= */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-[#22272c] pb-4 gap-4">
+        <div>
+          <div className="flex items-center gap-2 text-xs font-bold tracking-[0.2em] text-[#ff1801] uppercase font-broadcast">
+            <Zap size={12} className="fill-current animate-pulse" />
+            Live Telemetry Broadcast Centre
           </div>
-          <h3 className="text-xl font-bold text-white mb-2 group-hover:text-cyan-400 transition-colors">Compare Drivers</h3>
-          <p className="text-sm text-slate-400">Head-to-head telemetry, pace analysis, and cornering speeds.</p>
-        </Card>
-
-        <Card onClick={() => navigate("/stats")}>
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500">
-              <TrendingUp size={20} />
-            </div>
-          </div>
-          <h3 className="text-xl font-bold text-white mb-2">Season Trends</h3>
-          <p className="text-sm text-slate-400">Visualizing championship battles and team development rates.</p>
-        </Card>
-
-        <Card>
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-2 rounded-lg bg-purple-500/10 text-purple-500">
-              <Calendar size={20} />
-            </div>
-            <span className="text-xs text-slate-500 font-medium">UPCOMING</span>
-          </div>
-          <h3 className="text-xl font-bold text-white mb-2 outline-dashed outline-1 outline-transparent">Race Monitor</h3>
-          <p className="text-sm text-slate-400">Live lap times and gap analysis (Coming Soon).</p>
-        </Card>
-      </section>
-
-      {/* ================= FEATURED RACES ================= */}
-      <section>
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-white">Featured Races</h2>
-          <Button variant="ghost" onClick={() => navigate("/season/2025")}>View All →</Button>
+          <h1 className="text-4xl md:text-5xl font-black italic tracking-tight uppercase text-white font-broadcast mt-1">
+            F1 Dashboard <span className="text-gray-400">//{season}</span>
+          </h1>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sampleRaces.map((race) => (
-            <FeaturedRaceCard key={race.title} race={race} />
+        {isOffseason && (
+          <div className="flex items-center gap-1.5 px-3 py-1 bg-[#facc15]/10 border border-[#facc15]/30 text-[#facc15] text-xs font-bold uppercase tracking-wider font-broadcast">
+            Off-Season Archive Mode
+          </div>
+        )}
+      </div>
+
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/30 p-4 text-red-400 text-sm font-semibold uppercase tracking-wider font-broadcast">
+          ⚠️ {error}
+        </div>
+      )}
+
+      {/* ================= HORIZONTAL SCHEDULE STRIP ================= */}
+      <section className="bg-[#0d0f11] border border-[#22272c] p-4 relative overflow-hidden">
+        <div className="absolute top-0 left-0 h-full w-[3px] bg-[#ff1801]" />
+        <div className="flex items-center gap-2 mb-3">
+          <Calendar size={14} className="text-[#ff1801]" />
+          <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 font-broadcast">
+            Season Race Calendar & Winners
+          </h3>
+        </div>
+        
+        <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-white/10">
+          {F1_SCHEDULE.map((s) => (
+            <div
+              key={s.round}
+              className="flex-none w-[170px] bg-[#121518] border border-[#22272c] p-3 text-xs font-broadcast relative"
+            >
+              <div className="absolute top-0 right-0 px-1.5 py-0.5 bg-white/5 text-[9px] font-bold text-slate-500">
+                R{s.round}
+              </div>
+              <div className="font-bold text-white uppercase truncate pr-6">{s.race}</div>
+              <div className="text-slate-400 text-[10px] uppercase tracking-wider">{s.circuit}</div>
+              
+              <div className="mt-2 flex items-center justify-between border-t border-[#22272c] pt-2">
+                <span className="text-[10px] text-slate-500 uppercase tracking-widest">WINNER</span>
+                <span className="font-black text-[#ff1801] tracking-wider">{s.winner}</span>
+              </div>
+            </div>
           ))}
-
-          {/* Promo Card */}
-          <div className="hidden lg:block relative rounded-xl overflow-hidden bg-gradient-to-br from-cyan-900/40 to-blue-900/40 border border-white/10 p-8 flex flex-col justify-center">
-            <div className="absolute inset-0 bg-[url('/src/assets/grid-pattern.svg')] opacity-30" />
-            <div className="relative z-10">
-              <h3 className="text-2xl font-bold text-white mb-2">Pro Analytics</h3>
-              <p className="text-sm text-cyan-200 mb-6">
-                Unlock deep dive metrics including tire degradation models and fuel-adjusted pace.
-              </p>
-              <Button variant="primary" className="w-full">Get Started</Button>
-            </div>
-          </div>
         </div>
       </section>
+
+      {/* ================= MAIN CONTENT GRID ================= */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* DRIVER STANDINGS: TIMING TOWER STYLE (2/3 width) */}
+        <section className="lg:col-span-2 bg-[#0d0f11] border border-[#22272c] flex flex-col relative">
+          <div className="absolute top-0 left-0 h-[2px] w-full bg-[#ff1801]" />
+          
+          <div className="p-4 border-b border-[#22272c] flex justify-between items-center bg-[#121518]">
+            <div className="flex items-center gap-2">
+              <Trophy size={16} className="text-[#ff1801]" />
+              <h2 className="text-lg font-black uppercase italic tracking-wider text-white font-broadcast">
+                Driver Championship Tower
+              </h2>
+            </div>
+            <span className="text-[11px] font-bold text-slate-400 font-broadcast tracking-wider">
+              {driverStandings.length} DRIVERS ACTIVE
+            </span>
+          </div>
+
+          <div className="flex-1 divide-y divide-[#1e2329] overflow-y-auto max-h-[600px] scrollbar-thin">
+            {driverStandings.map((d) => {
+              const teamColor = d.team_colour || getTeamColor(d.team || d.constructor_id);
+              
+              return (
+                <div
+                  key={d.driver_code}
+                  onClick={() => navigate(`/driver/${d.driver_code}/season/${season}`)}
+                  className="flex items-center justify-between p-3.5 hover:bg-[#121518] transition-colors cursor-pointer group timing-strip"
+                  style={{ borderLeft: `4px solid ${teamColor}` }}
+                >
+                  {/* Position & Identity */}
+                  <div className="flex items-center gap-4">
+                    <div className="w-8 text-center text-lg font-black italic text-[#ff1801]">
+                      {d.position < 10 ? `0${d.position}` : d.position}
+                    </div>
+                    
+                    <div className="flex items-center gap-3">
+                      {d.headshot_url ? (
+                        <img
+                          src={d.headshot_url}
+                          alt={d.driver_name}
+                          className="w-10 h-10 object-contain bg-[#121518] border border-[#22272c] rounded-none"
+                          onError={(e) => { e.target.style.display = 'none'; }}
+                        />
+                      ) : (
+                        <div className="w-10 h-10 flex items-center justify-center bg-[#1e2329] font-black text-white text-xs">
+                          {d.driver_code}
+                        </div>
+                      )}
+                      
+                      <div>
+                        <div className="text-sm text-slate-300 font-bold uppercase tracking-wide group-hover:text-white transition-colors">
+                          {formatBroadcastName(d.driver_name)}
+                        </div>
+                        <div className="text-[10px] text-slate-500 uppercase tracking-widest">
+                          {d.team}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Stats Detail */}
+                  <div className="flex items-center gap-8">
+                    <div className="hidden sm:block text-right">
+                      <div className="text-[10px] text-slate-500 uppercase tracking-wider">WINS</div>
+                      <div className="text-xs font-bold text-slate-300">{d.wins || 0}</div>
+                    </div>
+                    <div className="text-right min-w-[70px]">
+                      <div className="text-[10px] text-slate-500 uppercase tracking-wider">POINTS</div>
+                      <div className="text-base font-black text-white italic tracking-wider">
+                        {d.points}
+                      </div>
+                    </div>
+                    <ChevronRight size={14} className="text-slate-600 group-hover:text-[#ff1801] transition-colors" />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* RIGHT COLUMN: CONSTRUCTORS & COMPARE TOOL (1/3 width) */}
+        <div className="space-y-6">
+          
+          {/* QUICK COMPARE TOOL */}
+          <section className="bg-[#0d0f11] border border-[#22272c] p-4 relative">
+            <div className="absolute top-0 left-0 h-full w-[3px] bg-[#ff1801]" />
+            
+            <div className="flex items-center gap-2 mb-4 border-b border-[#22272c] pb-2">
+              <GitCompare size={16} className="text-[#ff1801]" />
+              <h2 className="text-base font-black uppercase italic tracking-wider text-white font-broadcast">
+                Telemetry Comparison Run
+              </h2>
+            </div>
+
+            <form onSubmit={handleCompareSubmit} className="space-y-4">
+              <div>
+                <label className="block text-[10px] text-slate-400 uppercase tracking-widest font-broadcast mb-1.5">
+                  Primary Driver (A)
+                </label>
+                <select
+                  value={compareD1}
+                  onChange={(e) => setCompareD1(e.target.value)}
+                  className="w-full bg-[#121518] border border-[#22272c] p-2.5 text-xs text-white uppercase font-broadcast focus:outline-none focus:border-[#ff1801]"
+                  required
+                >
+                  <option value="">-- SELECT DRIVER A --</option>
+                  {drivers.map((d) => (
+                    <option key={d.code} value={d.code}>
+                      {d.number} - {d.name} ({d.team})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[10px] text-slate-400 uppercase tracking-widest font-broadcast mb-1.5">
+                  Comparison Driver (B)
+                </label>
+                <select
+                  value={compareD2}
+                  onChange={(e) => setCompareD2(e.target.value)}
+                  className="w-full bg-[#121518] border border-[#22272c] p-2.5 text-xs text-white uppercase font-broadcast focus:outline-none focus:border-[#ff1801]"
+                  required
+                >
+                  <option value="">-- SELECT DRIVER B --</option>
+                  {drivers.map((d) => (
+                    <option key={d.code} value={d.code}>
+                      {d.number} - {d.name} ({d.team})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full bg-[#ff1801] hover:bg-[#d01300] text-white text-xs font-black uppercase italic tracking-wider py-3 px-4 transition-colors font-broadcast flex items-center justify-center gap-2 btn-broadcast"
+              >
+                <GitCompare size={14} /> Run Telemetry Delta
+              </button>
+            </form>
+          </section>
+
+          {/* CONSTRUCTOR STANDINGS */}
+          <section className="bg-[#0d0f11] border border-[#22272c] flex flex-col relative">
+            <div className="absolute top-0 left-0 h-[2px] w-full bg-[#ff1801]" />
+            
+            <div className="p-4 border-b border-[#22272c] bg-[#121518]">
+              <h2 className="text-base font-black uppercase italic tracking-wider text-white font-broadcast">
+                Constructor Standings
+              </h2>
+            </div>
+
+            <div className="divide-y divide-[#1e2329]">
+              {constructorStandings.map((c) => {
+                const teamColor = c.team_colour || getTeamColor(c.team || c.constructor_id);
+                
+                return (
+                  <div
+                    key={c.team}
+                    className="flex items-center justify-between p-3 hover:bg-[#121518] transition-colors cursor-default"
+                    style={{ borderLeft: `3px solid ${teamColor}` }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="w-5 text-center text-sm font-black italic text-slate-400">
+                        {c.position}
+                      </span>
+                      <span className="text-xs font-bold text-white uppercase tracking-wider font-broadcast">
+                        {c.team}
+                      </span>
+                    </div>
+                    
+                    <div className="text-right">
+                      <span className="text-sm font-black text-white italic tracking-wider font-broadcast">
+                        {c.points} <span className="text-[9px] text-slate-500 font-bold tracking-normal not-italic">PTS</span>
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+        </div>
+      </div>
     </div>
   );
 }

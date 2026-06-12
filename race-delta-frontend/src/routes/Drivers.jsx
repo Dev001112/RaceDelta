@@ -5,58 +5,82 @@ import client from "../api/client";
 import Card from "../components/ui/Card";
 import { User, Flag } from "lucide-react";
 
+import { getTeamColor } from "../lib/teamMeta";
+
 /* ---------------------------------
-   Driver Card (Modern)
+   Driver Card (F1 Broadcast Style)
 ---------------------------------- */
 function DriverCard({ d, season }) {
   const navigate = useNavigate();
 
   if (!d?.code) return null;
+  const teamColor = getTeamColor(d.team);
+
+  // Format name: uppercase last name for broadcast style
+  const formatBroadcastName = (fullName) => {
+    if (!fullName) return "";
+    const parts = fullName.trim().split(" ");
+    if (parts.length === 1) return parts[0].toUpperCase();
+    const lastName = parts.slice(1).join(" ").toUpperCase();
+    return (
+      <span>
+        {parts[0]} <span className="font-black">{lastName}</span>
+      </span>
+    );
+  };
 
   return (
-    <Card
+    <div
       onClick={() => navigate(`/driver/${d.code}/season/${season || "current"}`)}
-      className="flex items-center gap-4 group"
+      className="bg-[#0d0f11] border border-[#22272c] p-3.5 flex items-center justify-between cursor-pointer group hover:bg-[#121518] transition-colors timing-strip relative"
+      style={{
+        borderLeft: `4px solid ${teamColor}`
+      }}
     >
-      <div className="relative">
-        <div className="w-16 h-16 rounded-xl overflow-hidden bg-slate-800 ring-2 ring-white/5 group-hover:ring-cyan-500/50 transition-all">
-          {d.photo ? (
-            <img
-              src={d.photo}
-              alt={d.name}
-              className="w-full h-full object-cover"
-              loading="lazy"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-700 to-slate-800 text-slate-400 font-bold text-xl">
-              {d.name?.[0]}
-            </div>
-          )}
-        </div>
-        {/* Team Color Strip */}
-        <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-slate-900 flex items-center justify-center border border-slate-700 text-[10px] font-bold text-white shadow-lg z-10">
-          {d.number}
-        </div>
-      </div>
-
-      <div className="flex-1 min-w-0">
-        <h3 className="text-lg font-bold text-white truncate group-hover:text-cyan-400 transition-colors">
-          {d.name}
-        </h3>
-        <p className="text-sm text-slate-400 truncate">{d.team}</p>
-
-        {/* Country (Placeholder/If available) */}
-        {d.country && (
-          <div className="flex items-center gap-1 mt-1 text-xs text-slate-500 uppercase tracking-wider">
-            <span>{d.country}</span>
+      <div className="flex items-center gap-4">
+        {/* Driver Photo/Fallback */}
+        <div className="relative">
+          <div className="w-12 h-12 overflow-hidden bg-[#121518] border border-[#22272c] flex items-center justify-center">
+            {d.photo ? (
+              <img
+                src={d.photo}
+                alt={d.name}
+                className="w-full h-full object-contain"
+                loading="lazy"
+                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+              />
+            ) : (
+              <div className="text-white font-black text-xs font-broadcast">
+                {d.code}
+              </div>
+            )}
           </div>
-        )}
+          {/* Driver Number Badge */}
+          <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-[#070809] flex items-center justify-center border border-[#22272c] text-[9px] font-black text-white italic font-broadcast">
+            {d.number}
+          </div>
+        </div>
+
+        {/* Identity block */}
+        <div className="font-broadcast leading-tight">
+          <h3 className="text-sm font-bold text-white uppercase tracking-wide group-hover:text-[#ff1801] transition-colors">
+            {formatBroadcastName(d.name)}
+          </h3>
+          <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5">{d.team}</p>
+        </div>
       </div>
 
-      <div className="text-slate-600 group-hover:text-cyan-500 transition-colors">
-        →
+      <div className="flex items-center gap-3">
+        {d.country && (
+          <span className="hidden sm:inline text-[9px] font-bold text-slate-500 uppercase tracking-widest bg-white/5 border border-[#22272c] px-2 py-0.5 font-broadcast">
+            {d.country}
+          </span>
+        )}
+        <div className="text-slate-600 group-hover:text-[#ff1801] transition-colors font-broadcast font-bold">
+          →
+        </div>
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -112,20 +136,20 @@ export default function Drivers() {
   }
 
   return (
-    <div className="py-8 space-y-8">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+    <div className="py-8 space-y-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-[#22272c] pb-4">
         <div>
-          <h2 className="text-3xl font-bold text-white tracking-tight">
-            Driver Lineup <span className="text-cyan-500">{season}</span>
+          <h2 className="text-4xl font-black italic uppercase text-white font-broadcast tracking-tight">
+            Driver Lineup <span className="text-slate-400">//{season}</span>
           </h2>
-          <p className="text-slate-400 mt-2">
-            Explore profiles, career stats and season performance.
-            {isOffseason && <span className="ml-2 text-amber-500 text-sm font-medium bg-amber-500/10 px-2 py-0.5 rounded">Off-Season View</span>}
+          <p className="text-slate-400 mt-1.5 text-sm">
+            Explore profiles, career statistics and season performance telemetry.
+            {isOffseason && <span className="ml-2 text-[#facc15] text-xs font-bold bg-[#facc15]/10 px-2 py-0.5 border border-[#facc15]/20 font-broadcast uppercase">Off-Season Archive</span>}
           </p>
         </div>
 
-        <div className="px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-medium text-slate-400">
-          {drivers.length} Drivers Confirmed
+        <div className="px-3 py-1 bg-[#121518] border border-[#22272c] text-xs font-bold text-slate-400 font-broadcast uppercase tracking-wider">
+          {drivers.length} Drivers Logged
         </div>
       </div>
 

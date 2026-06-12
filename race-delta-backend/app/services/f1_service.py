@@ -10,6 +10,7 @@ from cachetools import TTLCache, LRUCache
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import fastf1
+from app.services import cache_store
 
 # Import models
 try:
@@ -142,6 +143,7 @@ def get_driver_laps(driver_code):
 OPENF1_BASE = os.getenv("OPENF1_BASE", "https://api.openf1.org/v1")
 HTTP_TIMEOUT = float(os.getenv("OPENF1_TIMEOUT", "10"))
 CACHE_TTL = int(os.getenv("OPENF1_CACHE_TTL", "300"))  # 5 minutes
+PERSISTENT_CACHE_TTL = int(os.getenv("OPENF1_PERSISTENT_CACHE_TTL", "21600"))  # 6 hours
 
 # Cache setup
 cache = TTLCache(maxsize=512, ttl=CACHE_TTL)
@@ -186,11 +188,19 @@ def normalize_team(name: str) -> str:
 def _api_request(endpoint: str, params: Optional[Dict] = None, use_cache: bool = True) -> Any:
     """Make request to OpenF1 API with caching"""
     url = f"{OPENF1_BASE.rstrip('/')}/{endpoint.lstrip('/')}"
-    cache_key = f"{url}:{str(params)}"
+    normalized_params = dict(sorted((params or {}).items()))
+    cache_key = f"{url}:{normalized_params}"
     
     if use_cache and cache_key in cache:
         print(f"Cache hit for: {cache_key}")
         return cache[cache_key]
+
+    if use_cache:
+        persisted = cache_store.get("openf1", cache_key)
+        if persisted is not None:
+            cache[cache_key] = persisted
+            print(f"Persistent cache hit for: {cache_key}")
+            return persisted
     
     try:
         print(f"Fetching from OpenF1: {url} with params: {params}")
@@ -202,6 +212,7 @@ def _api_request(endpoint: str, params: Optional[Dict] = None, use_cache: bool =
         
         if use_cache:
             cache[cache_key] = data
+            cache_store.set("openf1", cache_key, data, PERSISTENT_CACHE_TTL)
         
         return data
     except requests.RequestException as e:
@@ -248,10 +259,10 @@ def get_season_drivers(year: Optional[int] = None) -> Dict:
         latest_event = completed.iloc[-1]["EventName"]
 
         session = fastf1.get_session(year, latest_event, "RACE")
-        session.load(laps=True, telemetry=False)
+        session.load(laps=False, telemetry=False, weather=False, messages=False)
 
-        # Drivers who actually raced
-        raced_numbers = set(session.laps["DriverNumber"].unique())
+        # Drivers who actually raced. Results are much lighter than loading all laps.
+        raced_numbers = set(str(n) for n in session.results["DriverNumber"].dropna().unique())
 
         drivers = []
 
@@ -264,7 +275,7 @@ def get_season_drivers(year: Optional[int] = None) -> Dict:
 
             if not number or not code or not name:
                 continue
-            if number not in raced_numbers:
+            if str(number) not in raced_numbers:
                 continue
 
             drivers.append({
@@ -309,10 +320,15 @@ def _get_fallback_drivers() -> List[Dict]:
 def get_driver_laps(driver_code: str) -> Dict:
     """Get lap times for a specific driver from latest session"""
     try:
+        derived_cache_key = f"driver_laps:{driver_code.upper()}"
+        cached = cache_store.get("derived", derived_cache_key)
+        if cached is not None:
+            return cached
+
         print(f"Fetching laps for driver: {driver_code}")
         
         # Get latest race session
-        sessions = _api_request("sessions")
+        sessions = _api_request("sessions", params={"session_name": "Race"})
         if not sessions:
             return {"driver": driver_code, "laps": [], "source": "fallback", "error": "No sessions found"}
         
@@ -359,12 +375,14 @@ def get_driver_laps(driver_code: str) -> Dict:
                     "sector3": lap.get("duration_sector_3"),
                 })
         
-        return {
+        payload = {
             "driver": driver_code,
             "laps": lap_data,
             "source": "openf1",
             "session": latest_session.get("session_name")
         }
+        cache_store.set("derived", derived_cache_key, payload, PERSISTENT_CACHE_TTL)
+        return payload
     
     except Exception as e:
         print(f"Error fetching laps for {driver_code}: {e}")
@@ -375,10 +393,68 @@ def get_driver_laps(driver_code: str) -> Dict:
 
 # STANDINGS 
 
+def _classification_from_session_result(session_key):
+    rows = _api_request("session_result", params={"session_key": session_key}, use_cache=True)
+    if not rows:
+        return None
+
+    normalized = []
+    for row in rows:
+        try:
+            position = int(row.get("position") or row.get("classified_position") or row.get("pos"))
+        except Exception:
+            continue
+
+        driver_number = row.get("driver_number")
+        if driver_number is None:
+            continue
+
+        normalized.append({
+            "driver_number": driver_number,
+            "position": position,
+        })
+
+    return normalized or None
+
+
+def _classification_from_driver_laps(session_key, drivers):
+    normalized = []
+    for driver in drivers:
+        driver_number = driver.get("driver_number")
+        if not driver_number:
+            continue
+
+        laps = _api_request(
+            "laps",
+            params={"session_key": session_key, "driver_number": driver_number},
+            use_cache=True,
+        )
+        if not laps:
+            continue
+
+        final_lap = max(laps, key=lambda x: x.get("lap_number", 0))
+        try:
+            position = int(final_lap.get("position"))
+        except Exception:
+            continue
+
+        normalized.append({
+            "driver_number": driver_number,
+            "position": position,
+        })
+
+    return normalized
+
+
 def get_driver_standings(season: str = "current") -> Dict:
     """Get driver championship standings - OPTIMIZED VERSION"""
     try:
         year = datetime.now().year if season == "current" else int(season)
+        derived_cache_key = f"driver_standings:{year}"
+        cached = cache_store.get("derived", derived_cache_key)
+        if cached is not None:
+            return cached
+
         print(f"Computing standings for season: {year}")
         
         # Get all race sessions for the season (more efficient query)
@@ -442,22 +518,18 @@ def get_driver_standings(season: str = "current") -> Dict:
                 
                 print(f"    Found {len(drivers)} drivers")
                 
-                # Get all laps for this session (more efficient than per-driver)
-                all_laps = _api_request("laps", params={"session_key": session_key}, use_cache=True)
-                if not all_laps:
-                    print(f"    ⚠ No laps found")
+                classification = (
+                    _classification_from_session_result(session_key)
+                    or _classification_from_driver_laps(session_key, drivers)
+                )
+                if not classification:
+                    print("    No classification found")
                     continue
-                
-                print(f"    Got {len(all_laps)} laps")
-                
-                # Group laps by driver
-                driver_laps = {}
-                for lap in all_laps:
-                    dn = lap.get("driver_number")
-                    if dn:
-                        if dn not in driver_laps:
-                            driver_laps[dn] = []
-                        driver_laps[dn].append(lap)
+
+                classification_by_driver = {
+                    str(row["driver_number"]): row
+                    for row in classification
+                }
                 
                 # Process each driver
                 for driver in drivers:
@@ -477,14 +549,11 @@ def get_driver_standings(season: str = "current") -> Dict:
                             "team": team,
                         }
                     
-                    # Get driver's laps
-                    laps = driver_laps.get(driver_number, [])
-                    if not laps:
+                    result = classification_by_driver.get(str(driver_number))
+                    if not result:
                         continue
                     
-                    # Get final position from last lap
-                    final_lap = max(laps, key=lambda x: x.get("lap_number", 0))
-                    position = final_lap.get("position")
+                    position = result.get("position")
                     
                     if position and isinstance(position, (int, float)) and position in F1_POINTS:
                         points = F1_POINTS[int(position)]
@@ -537,13 +606,15 @@ def get_driver_standings(season: str = "current") -> Dict:
             source = "openf1"
             print(f"✓ Successfully computed standings for {len(standings)} drivers")
         
-        return {
+        payload = {
             "standings": standings,
             "season": year,
             "source": source,
             "races_processed": races_processed,
             "last_updated": datetime.now().isoformat()
         }
+        cache_store.set("derived", derived_cache_key, payload, PERSISTENT_CACHE_TTL)
+        return payload
     
     except Exception as e:
         print(f"ERROR in get_driver_standings: {e}")
@@ -577,6 +648,11 @@ def get_constructor_standings(season: str = "current") -> Dict:
     """Get constructor championship standings - OPTIMIZED"""
     try:
         year = datetime.now().year if season == "current" else int(season)
+        derived_cache_key = f"constructor_standings:{year}"
+        cached = cache_store.get("derived", derived_cache_key)
+        if cached is not None:
+            return cached
+
         print(f"Computing constructor standings for season: {year}")
         
         # Get race sessions directly (more efficient)
@@ -600,29 +676,27 @@ def get_constructor_standings(season: str = "current") -> Dict:
             if not drivers:
                 continue
             
-            # Get all laps at once
-            all_laps = _api_request("laps", params={"session_key": session_key}, use_cache=True)
-            if not all_laps:
+            classification = (
+                _classification_from_session_result(session_key)
+                or _classification_from_driver_laps(session_key, drivers)
+            )
+            if not classification:
                 continue
-            
-            # Group by driver
-            driver_laps = {}
-            for lap in all_laps:
-                dn = lap.get("driver_number")
-                if dn not in driver_laps:
-                    driver_laps[dn] = []
-                driver_laps[dn].append(lap)
+
+            classification_by_driver = {
+                str(row["driver_number"]): row
+                for row in classification
+            }
             
             for driver in drivers:
                 driver_number = driver.get("driver_number")
                 team = driver.get("team_name", "Unknown")
                 
-                laps = driver_laps.get(driver_number, [])
-                if not laps:
+                result = classification_by_driver.get(str(driver_number))
+                if not result:
                     continue
                 
-                final_lap = max(laps, key=lambda x: x.get("lap_number", 0))
-                position = final_lap.get("position")
+                position = result.get("position")
                 
                 if position and position in F1_POINTS:
                     points = F1_POINTS[position]
@@ -654,13 +728,15 @@ def get_constructor_standings(season: str = "current") -> Dict:
         else:
             source = "openf1"
         
-        return {
+        payload = {
             "standings": standings,
             "season": year,
             "source": source,
             "races_processed": min(len(completed_sessions), 10),
             "last_updated": datetime.now().isoformat()
         }
+        cache_store.set("derived", derived_cache_key, payload, PERSISTENT_CACHE_TTL)
+        return payload
     
     except Exception as e:
         print(f"Error computing constructor standings: {e}")
@@ -724,10 +800,15 @@ def get_tyre_data(session_key: Optional[str] = None, driver_number: Optional[int
 def get_car_telemetry(session_key: str, driver_number: int) -> Dict:
     """Get car telemetry data"""
     try:
+        derived_cache_key = f"telemetry:{session_key}:{driver_number}"
+        cached = cache_store.get("derived", derived_cache_key)
+        if cached is not None:
+            return cached
+
         car_data = _api_request("car_data", params={
             "session_key": session_key,
             "driver_number": driver_number
-        }, use_cache=False)
+        }, use_cache=True)
         
         if not car_data:
             return {"error": "No telemetry data", "data": []}
@@ -746,12 +827,14 @@ def get_car_telemetry(session_key: str, driver_number: int) -> Dict:
                 "gear": point.get("n_gear"),
             })
         
-        return {
+        payload = {
             "data": telemetry,
             "driver_number": driver_number,
             "session_key": session_key,
             "source": "openf1"
         }
+        cache_store.set("derived", derived_cache_key, payload, PERSISTENT_CACHE_TTL)
+        return payload
     
     except Exception as e:
         print(f"Error fetching telemetry: {e}")

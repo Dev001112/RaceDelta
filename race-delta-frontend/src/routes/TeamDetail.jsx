@@ -25,7 +25,7 @@ export default function TeamDetail() {
       })
       .catch(e => console.error("Failed to fetch drivers for headshots:", e));
 
-    fetchTeamDetail(constructorId)
+    fetchTeamDetail(constructorId, displaySeason)
       .then(setTeam)
       .catch((e) => console.error("Team detail fetch error:", e))
       .finally(() => setLoading(false));

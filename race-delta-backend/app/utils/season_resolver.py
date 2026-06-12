@@ -16,8 +16,11 @@ from typing import Dict, Optional, List
 import fastf1
 import pandas as pd
 import logging
+import time
 
 logger = logging.getLogger(__name__)
+_season_cache = {"expires_at": 0, "value": None}
+_SEASON_CACHE_TTL = 60 * 30
 
 
 def resolve_seasons() -> Dict:
@@ -35,6 +38,9 @@ def resolve_seasons() -> Dict:
         }
     """
     now = datetime.now(timezone.utc)
+    if _season_cache["value"] is not None and _season_cache["expires_at"] > time.time():
+        return _season_cache["value"]
+
     calendar_season = now.year
     
     # Defaults (assume offseason/pre-season)
@@ -82,7 +88,7 @@ def resolve_seasons() -> Dict:
         is_offseason=is_offseason
     )
     
-    return {
+    payload = {
         "calendar_season": calendar_season,
         "display_season": display_season,
         "active_season": active_season,
@@ -90,6 +96,9 @@ def resolve_seasons() -> Dict:
         "is_offseason": is_offseason,
         "seasons_dropdown": seasons_dropdown
     }
+    _season_cache["value"] = payload
+    _season_cache["expires_at"] = time.time() + _SEASON_CACHE_TTL
+    return payload
 
 
 def _build_seasons_dropdown(

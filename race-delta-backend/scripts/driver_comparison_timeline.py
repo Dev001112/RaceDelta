@@ -14,7 +14,22 @@ Optimized with:
 from datetime import datetime, date
 from concurrent.futures import ThreadPoolExecutor
 import requests
-from diskcache import Cache
+
+try:
+    from diskcache import Cache
+except ImportError:
+    class Cache:
+        def __init__(self, *_args, **_kwargs):
+            self._data = {}
+
+        def __contains__(self, key):
+            return key in self._data
+
+        def __getitem__(self, key):
+            return self._data[key]
+
+        def set(self, key, value, expire=None):
+            self._data[key] = value
 
 # --------------------------------------------------
 # CONFIG
