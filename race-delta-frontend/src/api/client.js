@@ -263,3 +263,42 @@ const client = {
 };
 
 export default client;
+
+/* --------------------------------------------------
+   PHASE 3 — DRIVER INTELLIGENCE (rating / DNA / clusters)
+-------------------------------------------------- */
+export function fetchAiRating(season) {
+  return safeFetch(`/api/ai/rating?season=${encodeURIComponent(season)}`);
+}
+export function fetchAiDna(season, driverCode, k = 5) {
+  return safeFetch(`/api/ai/dna?season=${encodeURIComponent(season)}&driver_code=${encodeURIComponent(driverCode)}&k=${k}`);
+}
+export function fetchAiClusters(season, method = "kmeans", k = 4) {
+  return safeFetch(`/api/ai/clusters?season=${encodeURIComponent(season)}&method=${method}&k=${k}`);
+}
+
+/* --------------------------------------------------
+   PHASE 4 — STRATEGY LAB (replay / simulator)
+-------------------------------------------------- */
+export function fetchStrategyRaces(season) {
+  return safeFetch(`/api/strategy/races?season=${encodeURIComponent(season)}`);
+}
+export function fetchStrategyRace(season, round) {
+  return safeFetch(`/api/strategy/race?season=${encodeURIComponent(season)}&round=${encodeURIComponent(round)}`);
+}
+export function fetchStrategyReplay(season, round, driverCode, lap) {
+  return safeFetch(`/api/strategy/replay?season=${encodeURIComponent(season)}&round=${encodeURIComponent(round)}&driver_code=${encodeURIComponent(driverCode)}&lap=${lap}`);
+}
+export function postStrategySimulate(payload) {
+  return safeFetch(`/api/strategy/simulate`, { method: "POST", body: JSON.stringify(payload) });
+}
+
+/* --------------------------------------------------
+   PHASE 5 — AI RACE ANALYST
+-------------------------------------------------- */
+export function fetchAnalystStatus() {
+  return safeFetch(`/api/analyst/status`);
+}
+export function postAnalystAsk(payload) {
+  return safeFetch(`/api/analyst/ask`, { method: "POST", body: JSON.stringify(payload) });
+}

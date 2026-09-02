@@ -16,6 +16,9 @@ import Search from "./routes/Search";
 
 import DriverSeasonRoute from "./routes/DriverSeason";
 import DriverComparison from "./pages/DriverComparison";
+import DriverIntelligence from "./pages/DriverIntelligence";
+import StrategyLab from "./pages/StrategyLab";
+import RaceAnalyst from "./pages/RaceAnalyst";
 
 export default function App() {
   const location = useLocation();
@@ -54,6 +57,15 @@ export default function App() {
               path="/compare/drivers"
               element={<DriverComparison />}
             />
+
+            {/* AI Lab (Phase 3) */}
+            <Route path="/ai" element={<DriverIntelligence />} />
+
+            {/* Strategy Lab (Phase 4) */}
+            <Route path="/strategy" element={<StrategyLab />} />
+
+            {/* AI Race Analyst (Phase 5) */}
+            <Route path="/analyst" element={<RaceAnalyst />} />
           </Routes>
         </AnimatePresence>
       </main>

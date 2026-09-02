@@ -9,9 +9,7 @@ from app.services import cache_store
 # --------------------------------------------------
 # FastF1 cache (SAFE INIT)
 # --------------------------------------------------
-CACHE_DIR = "fastf1_cache"
-os.makedirs(CACHE_DIR, exist_ok=True)
-fastf1.Cache.enable_cache(CACHE_DIR)
+import app.fastf1_setup  # noqa: F401  (enables the shared FastF1 cache)
 DERIVED_CACHE_TTL = int(os.getenv("FASTF1_DERIVED_CACHE_TTL", "21600"))
 
 # --------------------------------------------------

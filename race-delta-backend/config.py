@@ -1,5 +1,10 @@
 # config.py
 import os
+from dotenv import load_dotenv
+
+# Must run before the Config classes below call os.getenv(). create_app() also calls
+# load_dotenv(), but only after this module has already been imported.
+load_dotenv()
 
 class Config:
     """Base configuration"""

@@ -1,7 +1,7 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import SeasonSelector from "./SeasonSelector";
-import { BarChart3, Gauge, Users, Flag } from "lucide-react";
+import { BarChart3, Gauge, Users, Flag, Brain, Route, MessageSquare } from "lucide-react";
 
 export default function Navbar() {
   const location = useLocation();
@@ -11,6 +11,9 @@ export default function Navbar() {
     { label: "Compare", path: "/compare/drivers", icon: BarChart3 },
     { label: "Drivers", path: "/drivers", icon: Users },
     { label: "Teams", path: "/teams", icon: Flag },
+    { label: "AI Lab", path: "/ai", icon: Brain },
+    { label: "Strategy", path: "/strategy", icon: Route },
+    { label: "Analyst", path: "/analyst", icon: MessageSquare },
   ];
 
   const isActive = (path) =>
