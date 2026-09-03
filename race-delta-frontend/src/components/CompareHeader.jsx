@@ -2,10 +2,10 @@ import { TEAM_LOGOS } from "../lib/teamLogos";
 
 function DriverPanel({ driver }) {
   return (
-    <div className="panel panel-plain p-4 flex items-center gap-4 min-w-0">
-      {driver.photo && <img src={driver.photo} alt={driver.name} className="w-16 h-16 object-contain bg-raised border border-line" />}
+    <div className="panel panel-plain p-3 flex items-center gap-4 min-w-0">
+      {driver.photo && <img src={driver.photo} alt={driver.name} className="w-14 h-14 object-contain bg-raised border border-line" />}
       <div className="min-w-0">
-        <div className="font-broadcast font-black italic uppercase text-white text-xl truncate">{driver.name}</div>
+        <div className="font-broadcast font-black italic uppercase text-white text-lg truncate">{driver.name}</div>
         <div className="text-muted">{driver.team}</div>
       </div>
       {TEAM_LOGOS[driver.team] && <img src={TEAM_LOGOS[driver.team]} alt={driver.team} className="ml-auto h-10 hidden sm:block" />}

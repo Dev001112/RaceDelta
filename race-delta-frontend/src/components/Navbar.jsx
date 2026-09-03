@@ -45,7 +45,7 @@ export default function Navbar() {
                 <Link
                   key={path}
                   to={path}
-                  className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-black uppercase tracking-[0.05em] font-broadcast italic transition-all ${
+                  className={`flex items-center gap-1.5 px-3 lg:px-3.5 py-2.5 text-sm font-black uppercase tracking-[0.05em] font-broadcast italic whitespace-nowrap transition-all ${
                     active
                       ? "bg-f1 text-white"
                       : "text-zinc-400 hover:bg-raised hover:text-white"

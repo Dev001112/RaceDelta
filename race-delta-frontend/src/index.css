@@ -28,7 +28,7 @@
   --font-body: 'Titillium Web', ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
 
-html { font-size: 17px; }
+html { font-size: 16px; }
 html, body, #root { height: 100%; }
 
 body {
@@ -80,11 +80,11 @@ body {
 .page-title {
   font-family: var(--font-display);
   font-weight: 900; font-style: italic; text-transform: uppercase;
-  font-size: clamp(2.3rem, 4.2vw, 3.3rem); line-height: 0.95; letter-spacing: -0.01em;
+  font-size: clamp(2rem, 3.4vw, 2.8rem); line-height: 0.95; letter-spacing: -0.01em;
   color: #fff; margin-top: 0.25rem;
 }
 .page-title .dim { color: var(--dim); }
-.page-sub { color: var(--muted); font-size: 1.05rem; line-height: 1.5; max-width: 72ch; margin-top: 0.6rem; }
+.page-sub { color: var(--muted); font-size: 1rem; line-height: 1.5; max-width: 72ch; margin-top: 0.5rem; }
 .page-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
 
 /* ---------------------------------------------------------------- panels */
@@ -102,7 +102,7 @@ body {
 }
 .panel-title {
   font-family: var(--font-display); font-weight: 900; font-style: italic; text-transform: uppercase;
-  font-size: 1.3rem; letter-spacing: 0.04em; color: #fff; line-height: 1.1;
+  font-size: 1.2rem; letter-spacing: 0.04em; color: #fff; line-height: 1.1;
 }
 .panel-subtitle { color: var(--muted); font-size: 0.92rem; margin-top: 0.15rem; }
 .panel-body { padding: 1.1rem; }
@@ -110,14 +110,14 @@ body {
 /* ---------------------------------------------------------------- stat tiles */
 .stat-tile { background: var(--panel-strong); border: 1px solid var(--line); padding: 0.8rem 0.95rem; }
 .stat-label { font-family: var(--font-display); font-weight: 700; font-size: 0.74rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
-.stat-value { font-family: var(--font-display); font-weight: 800; font-style: italic; font-size: 1.6rem; line-height: 1.1; color: #fff; margin-top: 0.15rem; font-variant-numeric: tabular-nums; }
+.stat-value { font-family: var(--font-display); font-weight: 800; font-style: italic; font-size: 1.5rem; line-height: 1.1; color: #fff; margin-top: 0.15rem; font-variant-numeric: tabular-nums; }
 .stat-sub { color: var(--muted); font-size: 0.86rem; margin-top: 0.15rem; }
 
 /* ---------------------------------------------------------------- controls */
 .select-broadcast, .input-broadcast {
   background: var(--panel-strong); border: 1px solid var(--line); color: var(--text);
   font-family: var(--font-body); font-weight: 600; font-size: 0.95rem;
-  padding: 0.55rem 0.8rem; border-radius: 0; min-height: 2.6rem;
+  padding: 0.5rem 0.8rem; border-radius: 0; min-height: 2.5rem;
 }
 .select-broadcast:focus, .input-broadcast:focus { outline: none; border-color: var(--accent); }
 .input-broadcast::placeholder { color: var(--dim); font-weight: 400; }
