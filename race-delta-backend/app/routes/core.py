@@ -66,9 +66,10 @@ def drivers_list():
             drivers_data["is_offseason"] = False
             return jsonify(drivers_data)
 
-        # Get drivers from OpenF1 (roster-based, not race-dependent)
-        # Fetch drivers from OpenF1 driver index
-        openf1_drivers = cached_openf1_get("drivers")
+        # OpenF1's /drivers is per-session, not a season roster: unfiltered it returns every
+        # driver it has ever seen (57 for 2026, including Sargeant, Ricciardo and Perez at Red
+        # Bull, plus the same driver under two acronyms). session_key=latest gives the real grid.
+        openf1_drivers = cached_openf1_get("drivers", {"session_key": "latest"})
 
         if openf1_drivers is None:
             # Fallback to existing service if OpenF1 fails
