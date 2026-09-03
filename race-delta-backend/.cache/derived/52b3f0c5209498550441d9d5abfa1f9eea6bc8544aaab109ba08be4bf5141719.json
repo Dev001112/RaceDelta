@@ -1,0 +1,1 @@
+{"expires_at":1788369068.564822,"value":{"season":1999,"method":"within-race z-score \u2192 min-max 0\u2013100 \u2192 weighted sum","weights":{"race_pace":0.25,"qualifying_pace":0.15,"consistency":0.15,"tyre_management":0.1,"overtaking":0.1,"defence":0.05,"position_gain":0.1,"wet_performance":0.05,"discipline":0.05},"count":0,"drivers":[],"source":"feature_store"}}
