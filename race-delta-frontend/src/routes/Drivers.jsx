@@ -32,7 +32,7 @@ function DriverCard({ d, season }) {
   return (
     <div
       onClick={() => navigate(`/driver/${d.code}/season/${season || "current"}`)}
-      className="bg-[#0d0f11] border border-[#22272c] p-3.5 flex items-center justify-between cursor-pointer group hover:bg-[#121518] transition-colors timing-strip relative"
+      className="bg-panel border border-line p-3.5 flex items-center justify-between cursor-pointer group hover:bg-raised transition-colors timing-strip relative"
       style={{
         borderLeft: `4px solid ${teamColor}`
       }}
@@ -40,7 +40,7 @@ function DriverCard({ d, season }) {
       <div className="flex items-center gap-4">
         {/* Driver Photo/Fallback */}
         <div className="relative">
-          <div className="w-12 h-12 overflow-hidden bg-[#121518] border border-[#22272c] flex items-center justify-center">
+          <div className="w-12 h-12 overflow-hidden bg-raised border border-line flex items-center justify-center">
             {d.photo ? (
               <img
                 src={d.photo}
@@ -56,14 +56,14 @@ function DriverCard({ d, season }) {
             )}
           </div>
           {/* Driver Number Badge */}
-          <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-[#070809] flex items-center justify-center border border-[#22272c] text-[11px] font-black text-white italic font-broadcast">
+          <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-carbon flex items-center justify-center border border-line text-[11px] font-black text-white italic font-broadcast">
             {d.number}
           </div>
         </div>
 
         {/* Identity block */}
         <div className="font-broadcast leading-tight">
-          <h3 className="text-sm font-bold text-white uppercase tracking-wide group-hover:text-[#ff1801] transition-colors">
+          <h3 className="text-sm font-bold text-white uppercase tracking-wide group-hover:text-f1 transition-colors">
             {formatBroadcastName(d.name)}
           </h3>
           <p className="text-[12px] text-slate-500 uppercase tracking-widest mt-0.5">{d.team}</p>
@@ -72,11 +72,11 @@ function DriverCard({ d, season }) {
 
       <div className="flex items-center gap-3">
         {d.country && (
-          <span className="hidden sm:inline text-[11px] font-bold text-slate-500 uppercase tracking-widest bg-white/5 border border-[#22272c] px-2 py-0.5 font-broadcast">
+          <span className="hidden sm:inline text-[11px] font-bold text-slate-500 uppercase tracking-widest bg-white/5 border border-line px-2 py-0.5 font-broadcast">
             {d.country}
           </span>
         )}
-        <div className="text-slate-600 group-hover:text-[#ff1801] transition-colors font-broadcast font-bold">
+        <div className="text-slate-600 group-hover:text-f1 transition-colors font-broadcast font-bold">
           →
         </div>
       </div>
@@ -137,18 +137,18 @@ export default function Drivers() {
 
   return (
     <div className="py-8 space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-[#22272c] pb-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-line pb-4">
         <div>
           <h2 className="text-4xl font-black italic uppercase text-white font-broadcast tracking-tight">
             Driver Lineup <span className="text-slate-400">//{season}</span>
           </h2>
           <p className="text-slate-400 mt-1.5 text-sm">
             Explore profiles, career statistics and season performance telemetry.
-            {isOffseason && <span className="ml-2 text-[#facc15] text-xs font-bold bg-[#facc15]/10 px-2 py-0.5 border border-[#facc15]/20 font-broadcast uppercase">Off-Season Archive</span>}
+            {isOffseason && <span className="ml-2 text-flag text-xs font-bold bg-flag/10 px-2 py-0.5 border border-flag/20 font-broadcast uppercase">Off-Season Archive</span>}
           </p>
         </div>
 
-        <div className="px-3 py-1 bg-[#121518] border border-[#22272c] text-xs font-bold text-slate-400 font-broadcast uppercase tracking-wider">
+        <div className="px-3 py-1 bg-raised border border-line text-xs font-bold text-slate-400 font-broadcast uppercase tracking-wider">
           {drivers.length} Drivers Logged
         </div>
       </div>

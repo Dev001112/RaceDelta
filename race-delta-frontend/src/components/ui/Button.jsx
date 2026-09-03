@@ -4,7 +4,7 @@ export default function Button({ children, variant = "primary", className = "", 
     const variants = {
         primary: "bg-[#e10600] text-white hover:bg-[#b90500]",
         secondary: "bg-[#16191d] border border-[#3a4048] text-white hover:bg-[#20242a]",
-        ghost: "bg-transparent text-[#9ca3af] hover:text-white"
+        ghost: "bg-transparent text-gray-400 hover:text-white"
     };
 
     const size = "px-4 py-2.5 text-xs";

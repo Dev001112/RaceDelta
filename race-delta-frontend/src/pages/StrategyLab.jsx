@@ -171,7 +171,7 @@ export default function StrategyLab() {
           <div className="flex items-center gap-4 mb-5" data-tour="lap-slider">
             <span className="stat-label w-20">Lap {lap}</span>
             <input type="range" min={1} max={maxLap} value={Math.min(lap, maxLap)} onChange={(e) => setLap(Number(e.target.value))}
-                   className="flex-1 accent-[#ff1801]" aria-label="Lap" />
+                   className="flex-1 accent-f1" aria-label="Lap" />
             <span className="stat-label">/ {maxLap}</span>
           </div>
 

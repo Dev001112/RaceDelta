@@ -239,6 +239,10 @@ export function fetchRaceAnalytics(sessionKey) {
   return safeFetch(`/api/race_analytics/${sessionKey}`);
 }
 
+export function fetchRace(season, round) {
+  return safeFetch(`/api/race/${encodeURIComponent(season)}/${encodeURIComponent(round)}`);
+}
+
 /* --------------------------------------------------
    DEFAULT EXPORT
 -------------------------------------------------- */
@@ -259,6 +263,7 @@ const client = {
   fetchDriverComparison,
   fetchDriverTimeline,
   fetchRaceAnalytics,
+  fetchRace,
   fetchSeasons,
   ping
 };

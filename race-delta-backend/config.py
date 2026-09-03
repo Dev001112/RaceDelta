@@ -30,6 +30,9 @@ class Config:
     # Request timeouts
     REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", "30"))  # seconds
 
+    # Browsers allowed to call the API. Any origin in development; production must list its frontend.
+    CORS_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS", "*").split(",") if o.strip()]
+
 
 class DevelopmentConfig(Config):
     """Development configuration"""
@@ -50,6 +53,7 @@ class ProductionConfig(Config):
     
     # Production settings
     OPENF1_CACHE_TTL = 600  # 10 minutes in production
+    CORS_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip()]
     STANDINGS_MAX_RACES = 5  # Process fewer races in production for speed
 
 

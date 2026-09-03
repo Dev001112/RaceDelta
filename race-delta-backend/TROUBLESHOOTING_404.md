@@ -13,7 +13,7 @@
    - The app factory pattern must be used for routes to register
 
 3. **Blueprint Not Registered**
-   - Routes are in `app/routes.py` with `@api_bp.route()` decorators
+   - Routes are in `app/routes/` (one module per area) with `@api_bp.route()` decorators
    - Blueprint is registered in `app/__init__.py` with `url_prefix="/api"`
 
 ### Verification Steps
@@ -30,9 +30,10 @@
 
 2. **Run Test Script**
    ```bash
-   python test_routes.py
+   python -c "from app import create_app; a=create_app(); print(*sorted(r.rule for r in a.url_map.iter_rules()), sep='
+')"
    ```
-   This will show all registered routes and test the health endpoint.
+   This lists every registered route.
 
 3. **Test Health Endpoint Directly**
    ```bash

@@ -8,18 +8,17 @@ import Tour from "./components/Tour";
 
 import Home from "./routes/Home";
 import Race from "./routes/Race";
-import Driver from "./routes/Driver";
 import Drivers from "./routes/Drivers";
 import Teams from "./routes/Teams";
 import TeamDetail from "./routes/TeamDetail";
 import Stats from "./routes/Stats";
-import Search from "./routes/Search";
 
-import DriverSeasonRoute from "./routes/DriverSeason";
+import DriverSeason from "./pages/DriverSeason";
 import DriverComparison from "./pages/DriverComparison";
 import DriverIntelligence from "./pages/DriverIntelligence";
 import StrategyLab from "./pages/StrategyLab";
 import RaceAnalyst from "./pages/RaceAnalyst";
+import NotFound from "./pages/NotFound";
 
 export default function App() {
   const location = useLocation();
@@ -39,19 +38,17 @@ export default function App() {
 
             {/* Drivers */}
             <Route path="/drivers" element={<Drivers />} />
-            <Route path="/driver/:driverId" element={<Driver />} />
             <Route
               path="/driver/:code/season/:season"
-              element={<DriverSeasonRoute />}
+              element={<DriverSeason />}
             />
 
             {/* Teams */}
             <Route path="/teams" element={<Teams />} />
             <Route path="/teams/:constructorId" element={<TeamDetail />} />
 
-            {/* Stats & Search */}
+            {/* Stats */}
             <Route path="/stats" element={<Stats />} />
-            <Route path="/search" element={<Search />} />
 
             {/* Comparison */}
             <Route
@@ -67,6 +64,8 @@ export default function App() {
 
             {/* AI Race Analyst (Phase 5) */}
             <Route path="/analyst" element={<RaceAnalyst />} />
+
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </AnimatePresence>
       </main>

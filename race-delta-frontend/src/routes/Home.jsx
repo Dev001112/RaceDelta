@@ -107,9 +107,9 @@ export default function Home() {
   return (
     <div className="space-y-6">
       {/* ================= BROADCAST TOP SUB-HEADER ================= */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-[#22272c] pb-4 gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-line pb-4 gap-4">
         <div>
-          <div className="flex items-center gap-2 text-xs font-bold tracking-[0.2em] text-[#ff1801] uppercase font-broadcast">
+          <div className="flex items-center gap-2 text-xs font-bold tracking-[0.2em] text-f1 uppercase font-broadcast">
             <Zap size={12} className="fill-current animate-pulse" />
             Live Telemetry Broadcast Centre
           </div>
@@ -119,7 +119,7 @@ export default function Home() {
         </div>
 
         {isOffseason && (
-          <div className="flex items-center gap-1.5 px-3 py-1 bg-[#facc15]/10 border border-[#facc15]/30 text-[#facc15] text-xs font-bold uppercase tracking-wider font-broadcast">
+          <div className="flex items-center gap-1.5 px-3 py-1 bg-flag/10 border border-flag/30 text-flag text-xs font-bold uppercase tracking-wider font-broadcast">
             Off-Season Archive Mode
           </div>
         )}
@@ -132,10 +132,10 @@ export default function Home() {
       )}
 
       {/* ================= HORIZONTAL SCHEDULE STRIP ================= */}
-      <section className="bg-[#0d0f11] border border-[#22272c] p-4 relative overflow-hidden" data-tour="calendar">
-        <div className="absolute top-0 left-0 h-full w-[3px] bg-[#ff1801]" />
+      <section className="bg-panel border border-line p-4 relative overflow-hidden" data-tour="calendar">
+        <div className="absolute top-0 left-0 h-full w-[3px] bg-f1" />
         <div className="flex items-center gap-2 mb-3">
-          <Calendar size={14} className="text-[#ff1801]" />
+          <Calendar size={14} className="text-f1" />
           <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 font-broadcast">
             Season Race Calendar & Winners
           </h3>
@@ -146,7 +146,7 @@ export default function Home() {
             <div
               key={s.round}
               onClick={() => navigate(`/race/${season}/${s.round}`)}
-              className="flex-none w-[170px] bg-[#121518] border border-[#22272c] hover:border-[#ff1801] p-3 text-xs font-broadcast relative cursor-pointer hover:bg-[#1a1e22] transition-all"
+              className="flex-none w-[170px] bg-raised border border-line hover:border-f1 p-3 text-xs font-broadcast relative cursor-pointer hover:bg-[#1a1e22] transition-all"
             >
               <div className="absolute top-0 right-0 px-1.5 py-0.5 bg-white/5 text-[11px] font-bold text-slate-500">
                 R{s.round}
@@ -154,9 +154,9 @@ export default function Home() {
               <div className="font-bold text-white uppercase truncate pr-6">{s.race}</div>
               <div className="text-slate-400 text-[12px] uppercase tracking-wider">{s.circuit}</div>
               
-              <div className="mt-2 flex items-center justify-between border-t border-[#22272c] pt-2">
+              <div className="mt-2 flex items-center justify-between border-t border-line pt-2">
                 <span className="text-[12px] text-slate-500 uppercase tracking-widest">WINNER</span>
-                <span className="font-black text-[#ff1801] tracking-wider">{s.winner}</span>
+                <span className="font-black text-f1 tracking-wider">{s.winner}</span>
               </div>
             </div>
           ))}
@@ -167,12 +167,12 @@ export default function Home() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* DRIVER STANDINGS: TIMING TOWER STYLE (2/3 width) */}
-        <section className="lg:col-span-2 lg:h-0 lg:min-h-full bg-[#0d0f11] border border-[#22272c] flex flex-col relative" data-tour="tower">
-          <div className="absolute top-0 left-0 h-[2px] w-full bg-[#ff1801]" />
+        <section className="lg:col-span-2 lg:h-0 lg:min-h-full bg-panel border border-line flex flex-col relative" data-tour="tower">
+          <div className="absolute top-0 left-0 h-[2px] w-full bg-f1" />
           
-          <div className="p-4 border-b border-[#22272c] flex justify-between items-center bg-[#121518]">
+          <div className="p-4 border-b border-line flex justify-between items-center bg-raised">
             <div className="flex items-center gap-2">
-              <Trophy size={16} className="text-[#ff1801]" />
+              <Trophy size={16} className="text-f1" />
               <h2 className="text-lg font-black uppercase italic tracking-wider text-white font-broadcast">
                 Driver Championship Tower
               </h2>
@@ -190,12 +190,12 @@ export default function Home() {
                 <div
                   key={d.driver_code}
                   onClick={() => navigate(`/driver/${d.driver_code}/season/${season}`)}
-                  className="flex items-center justify-between p-3.5 hover:bg-[#121518] transition-colors cursor-pointer group timing-strip"
+                  className="flex items-center justify-between p-3.5 hover:bg-raised transition-colors cursor-pointer group timing-strip"
                   style={{ borderLeft: `4px solid ${teamColor}` }}
                 >
                   {/* Position & Identity */}
                   <div className="flex items-center gap-4">
-                    <div className="w-8 text-center text-lg font-black italic text-[#ff1801]">
+                    <div className="w-8 text-center text-lg font-black italic text-f1">
                       {d.position < 10 ? `0${d.position}` : d.position}
                     </div>
                     
@@ -204,7 +204,7 @@ export default function Home() {
                         <img
                           src={d.headshot_url}
                           alt={d.driver_name}
-                          className="w-10 h-10 object-contain bg-[#121518] border border-[#22272c] rounded-none"
+                          className="w-10 h-10 object-contain bg-raised border border-line rounded-none"
                           onError={(e) => { e.target.style.display = 'none'; }}
                         />
                       ) : (
@@ -236,7 +236,7 @@ export default function Home() {
                         {d.points}
                       </div>
                     </div>
-                    <ChevronRight size={14} className="text-slate-600 group-hover:text-[#ff1801] transition-colors" />
+                    <ChevronRight size={14} className="text-slate-600 group-hover:text-f1 transition-colors" />
                   </div>
                 </div>
               );
@@ -248,11 +248,11 @@ export default function Home() {
         <div className="space-y-6">
           
           {/* QUICK COMPARE TOOL */}
-          <section className="bg-[#0d0f11] border border-[#22272c] p-4 relative" data-tour="compare">
-            <div className="absolute top-0 left-0 h-full w-[3px] bg-[#ff1801]" />
+          <section className="bg-panel border border-line p-4 relative" data-tour="compare">
+            <div className="absolute top-0 left-0 h-full w-[3px] bg-f1" />
             
-            <div className="flex items-center gap-2 mb-4 border-b border-[#22272c] pb-2">
-              <GitCompare size={16} className="text-[#ff1801]" />
+            <div className="flex items-center gap-2 mb-4 border-b border-line pb-2">
+              <GitCompare size={16} className="text-f1" />
               <h2 className="text-base font-black uppercase italic tracking-wider text-white font-broadcast">
                 Telemetry Comparison Run
               </h2>
@@ -266,7 +266,7 @@ export default function Home() {
                 <select
                   value={compareD1}
                   onChange={(e) => setCompareD1(e.target.value)}
-                  className="w-full bg-[#121518] border border-[#22272c] p-2.5 text-xs text-white uppercase font-broadcast focus:outline-none focus:border-[#ff1801]"
+                  className="w-full bg-raised border border-line p-2.5 text-xs text-white uppercase font-broadcast focus:outline-none focus:border-f1"
                   required
                 >
                   <option value="">-- SELECT DRIVER A --</option>
@@ -285,7 +285,7 @@ export default function Home() {
                 <select
                   value={compareD2}
                   onChange={(e) => setCompareD2(e.target.value)}
-                  className="w-full bg-[#121518] border border-[#22272c] p-2.5 text-xs text-white uppercase font-broadcast focus:outline-none focus:border-[#ff1801]"
+                  className="w-full bg-raised border border-line p-2.5 text-xs text-white uppercase font-broadcast focus:outline-none focus:border-f1"
                   required
                 >
                   <option value="">-- SELECT DRIVER B --</option>
@@ -299,7 +299,7 @@ export default function Home() {
 
               <button
                 type="submit"
-                className="w-full bg-[#ff1801] hover:bg-[#d01300] text-white text-xs font-black uppercase italic tracking-wider py-3 px-4 transition-colors font-broadcast flex items-center justify-center gap-2 btn-broadcast"
+                className="w-full bg-f1 hover:bg-[#d01300] text-white text-xs font-black uppercase italic tracking-wider py-3 px-4 transition-colors font-broadcast flex items-center justify-center gap-2 btn-broadcast"
               >
                 <GitCompare size={14} /> Run Telemetry Delta
               </button>
@@ -307,10 +307,10 @@ export default function Home() {
           </section>
 
           {/* CONSTRUCTOR STANDINGS */}
-          <section className="bg-[#0d0f11] border border-[#22272c] flex flex-col relative" data-tour="constructors">
-            <div className="absolute top-0 left-0 h-[2px] w-full bg-[#ff1801]" />
+          <section className="bg-panel border border-line flex flex-col relative" data-tour="constructors">
+            <div className="absolute top-0 left-0 h-[2px] w-full bg-f1" />
             
-            <div className="p-4 border-b border-[#22272c] bg-[#121518]">
+            <div className="p-4 border-b border-line bg-raised">
               <h2 className="text-base font-black uppercase italic tracking-wider text-white font-broadcast">
                 Constructor Standings
               </h2>
@@ -323,7 +323,7 @@ export default function Home() {
                 return (
                   <div
                     key={c.team}
-                    className="flex items-center justify-between p-3 hover:bg-[#121518] transition-colors cursor-default"
+                    className="flex items-center justify-between p-3 hover:bg-raised transition-colors cursor-default"
                     style={{ borderLeft: `3px solid ${teamColor}` }}
                   >
                     <div className="flex items-center gap-3">

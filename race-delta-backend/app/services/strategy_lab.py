@@ -532,8 +532,12 @@ def load_context(season: int, round_num: int, use_xgboost: bool = True) -> RaceC
 def list_races(season: int) -> list:
     """Every completed round of the season. `ingested` False = not in the feature store yet
     (it is ingested from FastF1 the first time it is opened, which can take up to a minute)."""
-    from models import RaceSession, DriverRaceFeature
+    from sqlalchemy import func
+    from models import db, RaceSession, DriverRaceFeature
     ingested = {rs.round: rs for rs in RaceSession.query.filter_by(season=season, session_type="R").all()}
+    driver_counts = dict(db.session.query(DriverRaceFeature.session_id, func.count())
+                         .filter(DriverRaceFeature.session_id.in_([rs.session_id for rs in ingested.values()]))
+                         .group_by(DriverRaceFeature.session_id).all()) if ingested else {}
     rounds = {}
     try:
         import fastf1
@@ -557,7 +561,7 @@ def list_races(season: int) -> list:
         rs = ingested.get(r)
         out.append({"round": r, "event": rs.event_name if rs else rounds[r], "ingested": rs is not None,
                     "total_laps": rs.total_laps if rs else None, "rainfall": rs.rainfall if rs else None,
-                    "drivers": DriverRaceFeature.query.filter_by(session_id=rs.session_id).count() if rs else 0})
+                    "drivers": driver_counts.get(rs.session_id, 0) if rs else 0})
     return out
 
 

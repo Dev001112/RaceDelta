@@ -105,7 +105,7 @@ export default function TeamDetail() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column: Details */}
-        <div className="bg-[#0f172a]/50 p-6 rounded-2xl border border-white/5 space-y-4 h-fit">
+        <div className="bg-slate-900/50 p-6 rounded-2xl border border-white/5 space-y-4 h-fit">
           <h3 className="text-xl font-bold text-white mb-4">Team Info</h3>
           <InfoRow label="Team Principal" value={team.team_principal} />
           <InfoRow label="Engine" value={team.engine} />
@@ -123,7 +123,7 @@ export default function TeamDetail() {
                 return (
                   <div
                     key={d.driver_number}
-                    className="bg-[#0f172a] p-6 rounded-2xl border border-white/10 flex items-center gap-6 hover:border-blue-500/50 transition-colors group"
+                    className="bg-slate-900 p-6 rounded-2xl border border-white/10 flex items-center gap-6 hover:border-blue-500/50 transition-colors group"
                   >
                     {headshot ? (
                       <img
@@ -160,7 +160,7 @@ export default function TeamDetail() {
 // Simple internal components for cleaner JSX
 function StatCard({ label, value, highlight = false }) {
   return (
-    <div className={`p-5 rounded-xl border ${highlight ? 'bg-gradient-to-br from-blue-600/20 to-blue-900/10 border-blue-500/30' : 'bg-[#0f172a] border-white/5'}`}>
+    <div className={`p-5 rounded-xl border ${highlight ? 'bg-gradient-to-br from-blue-600/20 to-blue-900/10 border-blue-500/30' : 'bg-slate-900 border-white/5'}`}>
       <div className="text-slate-400 text-sm font-medium uppercase tracking-wider mb-1">{label}</div>
       <div className={`text-3xl font-bold ${highlight ? 'text-blue-400' : 'text-white'}`}>{value}</div>
     </div>

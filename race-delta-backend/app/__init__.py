@@ -27,7 +27,7 @@ def create_app(config_name=None):
     if not app.config.get("SQLALCHEMY_DATABASE_URI"):
         raise RuntimeError("DATABASE_URL is not set. Set it in the shell or in a .env file.")
 
-    CORS(app)
+    CORS(app, origins=app.config["CORS_ORIGINS"])
 
     # Initialize the shared db instance with this Flask app
     db.init_app(app)

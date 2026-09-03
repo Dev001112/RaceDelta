@@ -1,9 +1,18 @@
+# Secrets: the image must never carry the API keys in .env
+.env
+.env.*
+!.env.example
+
+# Local environments and caches
 venv/
+.venv/
 __pycache__/
 *.pyc
 fastf1_cache/
-.cache/
 instance/
-scratch/
+
+# Not needed at runtime
 tests/
-.env
+scratch/
+scripts/__pycache__/
+*.md

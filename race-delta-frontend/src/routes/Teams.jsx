@@ -33,7 +33,7 @@ export default function Teams() {
 
   return (
     <div className="py-8 space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-[#22272c] pb-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-line pb-4">
         <div>
           <h2 className="text-4xl font-black italic uppercase text-white font-broadcast tracking-tight">
             Constructor Championship <span className="text-slate-400">//{season}</span>
