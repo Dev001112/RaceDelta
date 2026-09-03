@@ -29,4 +29,6 @@ ENV RACEDELTA_WARM_CACHE=0
 EXPOSE 8000
 # 1 worker: each is ~200MB resident (pandas+scipy+fastf1+sklearn), so 2 would OOM 512MB.
 # Threads instead, since the work is mostly waiting on the F1 API.
-CMD gunicorn -b 0.0.0.0:$PORT -w 1 --threads 8 --timeout 180 app:app
+# "app:app" is ambiguous: app.py and the app/ package both exist and the package wins,
+# so gunicorn found no "app" attribute in it. Point at the factory instead.
+CMD gunicorn -b 0.0.0.0:$PORT -w 1 --threads 8 --timeout 180 "app:create_app()"
