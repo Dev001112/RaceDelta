@@ -38,7 +38,9 @@ class Race(db.Model):
 
 class RaceResult(db.Model):
     __tablename__ = "race_results"
-    id = db.Column(db.BigInteger, primary_key=True)
+    # SQLite only auto-assigns rowids for INTEGER PRIMARY KEY, not BIGINT, so a plain
+    # BigInteger PK inserts NULL and trips a NOT NULL constraint. Postgres keeps BIGINT.
+    id = db.Column(db.BigInteger().with_variant(db.Integer, "sqlite"), primary_key=True)
     race_id = db.Column(db.Integer, db.ForeignKey('races.race_id', ondelete='CASCADE'), nullable=False, index=True)
     season = db.Column(db.Integer, nullable=False, index=True)
     driver_id = db.Column(db.Integer, db.ForeignKey('drivers.driver_id'), nullable=False)
@@ -94,7 +96,9 @@ class RaceSession(db.Model):
 class Lap(db.Model):
     """Per-driver, per-lap timing row (the raw telemetry-derived layer)."""
     __tablename__ = "laps"
-    id = db.Column(db.BigInteger, primary_key=True)
+    # SQLite only auto-assigns rowids for INTEGER PRIMARY KEY, not BIGINT, so a plain
+    # BigInteger PK inserts NULL and trips a NOT NULL constraint. Postgres keeps BIGINT.
+    id = db.Column(db.BigInteger().with_variant(db.Integer, "sqlite"), primary_key=True)
     session_id = db.Column(db.Integer, db.ForeignKey('race_sessions.session_id', ondelete='CASCADE'), nullable=False, index=True)
     driver_id = db.Column(db.Integer, db.ForeignKey('drivers.driver_id'), nullable=False)
     lap_number = db.Column(db.Integer, nullable=False)

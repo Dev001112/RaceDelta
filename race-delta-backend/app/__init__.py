@@ -32,6 +32,12 @@ def create_app(config_name=None):
     # Initialize the shared db instance with this Flask app
     db.init_app(app)
 
+    # Nothing else creates the schema (migrations are never run in the container) and the free
+    # instance gets a fresh empty DB on every restart, so eight endpoints 500'd with
+    # "no such table". create_all is a no-op once the tables exist.
+    with app.app_context():
+        db.create_all()
+
     # Register error handlers
     from .middleware.error_handler import register_error_handlers
     register_error_handlers(app)
