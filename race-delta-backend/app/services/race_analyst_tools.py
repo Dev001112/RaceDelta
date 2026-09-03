@@ -378,8 +378,14 @@ def execute_tool(name: str, args: dict, ctx_provider) -> dict:
             return {"data": data, "summary": summary}
         r = di.dna_for_season(int(args["season"]), str(args["driver"]))
         vec = sorted(r["vector"].items(), key=lambda kv: -kv[1])
-        summary = (f"{r['driver_code']} DNA {args['season']}: strongest {', '.join(f'{k.replace('_', ' ')} ({v:+.2f})' for k, v in vec[:3])}; "
-                   f"weakest {', '.join(f'{k.replace('_', ' ')} ({v:+.2f})' for k, v in vec[-2:])}. Most similar: "
+
+        # Reusing ' inside a '...' f-string is PEP 701, i.e. Python 3.12+. The image is 3.11-slim,
+        # so this was a SyntaxError at import and took the whole app down.
+        def fmt(pairs):
+            return ", ".join(f"{k.replace('_', ' ')} ({v:+.2f})" for k, v in pairs)
+
+        summary = (f"{r['driver_code']} DNA {args['season']}: strongest {fmt(vec[:3])}; "
+                   f"weakest {fmt(vec[-2:])}. Most similar: "
                    + ", ".join(f"{s['driver_code']} ({int(s['cosine_similarity'] * 100)}%)" for s in r["similar"][:3]) + ".")
         return {"data": {"driver_code": r["driver_code"], "vector": r["vector"], "similar": r["similar"][:5]}, "summary": summary}
 
