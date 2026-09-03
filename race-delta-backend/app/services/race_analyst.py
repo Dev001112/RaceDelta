@@ -16,6 +16,8 @@ import logging
 import os
 import re
 
+import requests
+
 from app.services import race_analyst_tools as T
 from app.services import strategy_lab as sl
 
@@ -27,6 +29,14 @@ except ImportError:  # SDK optional: offline mode still works
 logger = logging.getLogger(__name__)
 
 MODEL = os.getenv("ANALYST_MODEL", "claude-opus-5")
+# NVIDIA NIM (OpenAI-compatible). Kimi is listed there but is not served on every account,
+# so the model stays configurable: NVIDIA_MODEL=moonshotai/kimi-k3 once the account has it.
+NVIDIA_BASE = os.getenv("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1")
+NVIDIA_MODEL = os.getenv("NVIDIA_MODEL", "nvidia/nemotron-3-super-120b-a12b")
+NVIDIA_TIMEOUT = int(os.getenv("NVIDIA_TIMEOUT", "25"))       # a call that stalls this long is worth restarting
+NVIDIA_ATTEMPTS = int(os.getenv("NVIDIA_ATTEMPTS", "2"))
+NVIDIA_EFFORT = os.getenv("NVIDIA_REASONING_EFFORT", "low")   # answer latency is ~all output tokens
+NVIDIA_MAX_TOKENS = int(os.getenv("NVIDIA_MAX_TOKENS", "1500"))
 MAX_TURNS = 6
 MAX_TOKENS = 16000
 HISTORY_LIMIT = 12
@@ -37,7 +47,9 @@ Ground rules:
 - Answer ONLY from the data returned by your tools. Never use outside knowledge about a race, a driver or a result, even if you think you remember it. If the tools do not contain what is needed, say exactly that.
 - Call get_race_summary first when you have not yet looked at the race in this conversation, then the specific tool(s) the question needs. Prefer one or two well-chosen tool calls.
 - Quote the numbers the tools give you (seconds, laps, positions) with units, and name drivers as "NAME (CODE)".
-- Be concise: a one-line verdict, then 2-5 short supporting points. No preamble, no speculation beyond the data, no markdown tables.
+- Use the exact driver and team names the tools return. Never complete, guess or "correct" a name you did not read in a tool result.
+- Be concise: a one-line verdict, then 2-4 short supporting points, 120 words at most. No preamble, no speculation beyond the data.
+- Plain text only: no markdown, no **bold**, no tables, no ASCII art. Plain spaces and hyphens, never typographic ones.
 - Compounds, pit laps and flags come from timing data; pace metrics use green-flag, non-pit laps ("clean laps").
 
 Current context: season {season}{round_clause}. Use these unless the user names another race."""
@@ -52,6 +64,10 @@ def has_credentials() -> bool:
     return bool(os.getenv("ANTHROPIC_API_KEY") or os.getenv("ANTHROPIC_AUTH_TOKEN"))
 
 
+def nvidia_key():
+    return os.getenv("NVIDIA_API_KEY") or ""
+
+
 def make_client():
     """Anthropic client from the environment, or None when no credentials are configured."""
     if anthropic is None or not has_credentials():
@@ -60,9 +76,11 @@ def make_client():
 
 
 def status() -> dict:
-    live = anthropic is not None and has_credentials()
-    return {"mode": "claude" if live else "offline", "model": MODEL if live else None,
-            "sdk_installed": anthropic is not None, "has_credentials": has_credentials(),
+    claude = anthropic is not None and has_credentials()
+    nvidia = bool(nvidia_key())
+    mode = "nvidia" if nvidia else ("claude" if claude else "offline")
+    return {"mode": mode, "model": {"nvidia": NVIDIA_MODEL, "claude": MODEL}.get(mode),
+            "sdk_installed": anthropic is not None, "has_credentials": has_credentials() or nvidia,
             "tools": [t["name"] for t in T.TOOLS],
             "suggested_questions": ["Why did Ferrari lose?", "Why was Verstappen faster in Sector 2?",
                                     "Compare Norris and Leclerc during the second stint.", "Which pit stop changed the race?",
@@ -124,6 +142,86 @@ def _text(content) -> str:
     return "".join(getattr(b, "text", "") for b in content if getattr(b, "type", None) == "text").strip()
 
 
+# ============================================================ NVIDIA NIM (OpenAI-compatible) tool loop
+def _nvidia_tools():
+    """Anthropic tool schemas -> OpenAI function schemas."""
+    return [{"type": "function", "function": {"name": t["name"], "description": t["description"],
+                                              "parameters": t["input_schema"]}} for t in T.TOOLS]
+
+
+def _nvidia_chat(messages, attempts: int = NVIDIA_ATTEMPTS):
+    # The shared NVIDIA endpoint answers in ~2s but occasionally strands a request for 30-45s.
+    # A retry lands on another slot and is far quicker than waiting the stall out.
+    for attempt in range(1, attempts + 1):
+        try:
+            r = requests.post(f"{NVIDIA_BASE}/chat/completions",
+                              headers={"Authorization": f"Bearer {nvidia_key()}", "Content-Type": "application/json"},
+                              json={"model": NVIDIA_MODEL, "messages": messages, "tools": _nvidia_tools(),
+                                    "max_tokens": NVIDIA_MAX_TOKENS, "temperature": 0.2,
+                                    "reasoning_effort": NVIDIA_EFFORT},
+                              timeout=NVIDIA_TIMEOUT)
+            break
+        except requests.Timeout:
+            logger.warning("NVIDIA call stalled past %ss (attempt %s/%s)", NVIDIA_TIMEOUT, attempt, attempts)
+            if attempt == attempts:
+                raise AnalystError(f"'{NVIDIA_MODEL}' did not respond within {NVIDIA_TIMEOUT}s. Try again.")
+        except requests.RequestException as e:
+            raise AnalystError(f"Could not reach the NVIDIA API: {e}")
+    if r.status_code == 401:
+        raise AnalystError("The NVIDIA API key was rejected. Check NVIDIA_API_KEY.")
+    if r.status_code == 404:
+        raise AnalystError(f"Model '{NVIDIA_MODEL}' is not available on this NVIDIA account. Check NVIDIA_MODEL.")
+    if r.status_code == 410:   # NVIDIA retires hosted models on a published end-of-life date
+        raise AnalystError(f"Model '{NVIDIA_MODEL}' has been retired by NVIDIA. Set NVIDIA_MODEL to a current one.")
+    if r.status_code == 429:
+        raise AnalystError("NVIDIA rate limit reached. Try again in a moment.")
+    if not r.ok:
+        raise AnalystError(f"NVIDIA API error {r.status_code}: {r.text[:200]}")
+    return r.json()
+
+
+_TIDY = {0x202f: " ", 0x2009: " ", 0x00a0: " ", 0x2011: "-", 0x2212: "-", 0x2192: "->"}
+
+
+def _tidy(text: str) -> str:
+    """Typographic whitespace and leftover markdown emphasis render as literal junk in the chat bubble."""
+    return re.sub(r"\*\*(.+?)\*\*", r"\1", (text or "").translate(_TIDY)).strip()
+
+
+def ask_nvidia(question, season, round_num=None, history=None, ctx_provider=None, max_turns=MAX_TURNS) -> dict:
+    """Same tool-grounded loop as Claude, over any OpenAI-compatible NVIDIA-hosted model."""
+    ctx_provider = ctx_provider or sl.load_context
+    messages = ([{"role": "system", "content": _system(season, round_num, ctx_provider)}]
+                + _clean_history(history) + [{"role": "user", "content": question}])
+    tools_used, usage, answer = [], {"input_tokens": 0, "output_tokens": 0}, ""
+    for _ in range(max_turns):
+        data = _nvidia_chat(messages)
+        u = data.get("usage") or {}
+        usage["input_tokens"] += int(u.get("prompt_tokens") or 0)
+        usage["output_tokens"] += int(u.get("completion_tokens") or 0)
+        msg = (data.get("choices") or [{}])[0].get("message") or {}
+        calls = msg.get("tool_calls") or []
+        if not calls:
+            answer = _tidy(msg.get("content"))
+            break
+        # drop provider-specific fields (reasoning, refusal, ...) - some NIMs reject them on the way back
+        messages.append({"role": "assistant", "content": msg.get("content") or "", "tool_calls": calls})
+        for c in calls:
+            fn = c.get("function") or {}
+            try:
+                args = json.loads(fn.get("arguments") or "{}")
+            except json.JSONDecodeError:
+                args = {}
+            payload, is_error = _run_tool(fn.get("name"), args, ctx_provider)
+            tools_used.append({"name": fn.get("name"), "input": args,
+                               "summary": payload.get("error") if is_error else payload.get("summary"), "error": is_error})
+            messages.append({"role": "tool", "tool_call_id": c.get("id"), "content": json.dumps(payload, default=str)})
+    if not answer:
+        answer = "I ran out of steps before finishing the analysis. Please narrow the question."
+    return {"answer": answer, "mode": "nvidia", "model": NVIDIA_MODEL, "tools_used": tools_used, "usage": usage,
+            "stop_reason": "end_turn"}
+
+
 # ============================================================ Claude tool loop
 def ask(question: str, season: int, round_num=None, history=None, client=None, ctx_provider=None,
         max_turns: int = MAX_TURNS) -> dict:
@@ -132,6 +230,8 @@ def ask(question: str, season: int, round_num=None, history=None, client=None, c
     question = (question or "").strip()
     if not question:
         raise ValueError("question is required")
+    if client is None and nvidia_key():
+        return ask_nvidia(question, season, round_num, history, ctx_provider, max_turns)
     if client is None:
         client = make_client()
     if client is None:

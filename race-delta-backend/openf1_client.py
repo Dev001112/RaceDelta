@@ -145,8 +145,8 @@ def compute_standings_from_positions(db, year: Optional[int] = None, use_cache: 
         except Exception:
             continue
         for s in sessions:
-            stype = (s.get("type") or s.get("session_type") or s.get("sessionType") or "").lower()
-            if "race" not in stype:
+            # session_type is "Race" for the Sprint too - only session_name distinguishes them
+            if (s.get("session_name") or "").lower() != "race":
                 continue
             session_key = s.get("session_key") or s.get("key") or s.get("id")
             if not session_key:
@@ -274,8 +274,8 @@ def _find_latest_race_session(db, year: Optional[int] = None) -> Optional[Dict[s
         except Exception:
             continue
         for s in sessions:
-            stype = (s.get("type") or s.get("session_type") or s.get("sessionType") or "").lower()
-            if "race" not in stype:
+            # session_type is "Race" for the Sprint too - only session_name distinguishes them
+            if (s.get("session_name") or "").lower() != "race":
                 continue
             session_key = s.get("session_key") or s.get("key") or s.get("id")
             if session_key:

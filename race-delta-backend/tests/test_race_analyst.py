@@ -196,5 +196,80 @@ class ClaudeLoopTests(unittest.TestCase):
         self.assertEqual(roles, ["user", "assistant", "user"])
 
 
+class NvidiaLoopTests(unittest.TestCase):
+    """Same tool loop over the OpenAI-compatible NVIDIA endpoint, driven by a scripted _nvidia_chat."""
+    @classmethod
+    def setUpClass(cls):
+        cls.ctx = make_ctx()
+        cls.provider = staticmethod(lambda s, r: cls.ctx)
+
+    def run_with(self, replies):
+        sent, real = [], ra._nvidia_chat
+        def fake(messages):
+            sent.append([dict(m) for m in messages])
+            return replies.pop(0)
+        ra._nvidia_chat = fake
+        try:
+            out = ra.ask_nvidia("Which pit stop changed the race?", 2025, 1, ctx_provider=self.provider)
+        finally:
+            ra._nvidia_chat = real
+        return out, sent
+
+    def test_tool_loop_round_trip(self):
+        out, sent = self.run_with([
+            {"choices": [{"message": {"role": "assistant", "content": None, "reasoning": "think",
+                                      "tool_calls": [{"id": "call_1", "type": "function",
+                                                      "function": {"name": "get_pit_stops",
+                                                                   "arguments": '{"season": 2025, "round": 1, "driver": null}'}}]}}],
+             "usage": {"prompt_tokens": 100, "completion_tokens": 20}},
+            {"choices": [{"message": {"role": "assistant", "content": "BBB's lap 10 stop was decisive."}}],
+             "usage": {"prompt_tokens": 300, "completion_tokens": 80}}])
+        self.assertEqual((out["mode"], out["model"]), ("nvidia", ra.NVIDIA_MODEL))
+        self.assertEqual(out["answer"], "BBB's lap 10 stop was decisive.")
+        self.assertEqual([t["name"] for t in out["tools_used"]], ["get_pit_stops"])
+        self.assertFalse(out["tools_used"][0]["error"])
+        self.assertEqual(out["usage"], {"input_tokens": 400, "output_tokens": 100})
+        # second request: system prompt, the assistant turn stripped of provider-only fields, then the tool result
+        second = sent[1]
+        self.assertEqual(second[0]["role"], "system")
+        self.assertIn("Test GP", second[0]["content"])
+        self.assertEqual(set(second[-2]), {"role", "content", "tool_calls"})   # no "reasoning" echoed back
+        self.assertEqual((second[-1]["role"], second[-1]["tool_call_id"]), ("tool", "call_1"))
+        self.assertIn("most decisive", json.loads(second[-1]["content"])["summary"])
+
+    def test_stalled_call_is_retried_once(self):
+        calls, ok = [], NS(status_code=200, ok=True, json=lambda: {"choices": [{"message": {"content": "hi"}}]})
+        def post(url, **kw):
+            calls.append(kw)
+            if len(calls) == 1:
+                raise ra.requests.Timeout()
+            return ok
+        real = ra.requests.post
+        ra.requests.post = post
+        try:
+            self.assertEqual(ra._nvidia_chat([{"role": "user", "content": "q"}]), {"choices": [{"message": {"content": "hi"}}]})
+            self.assertEqual(len(calls), 2)
+            ra.requests.post = lambda url, **kw: (_ for _ in ()).throw(ra.requests.Timeout())
+            with self.assertRaises(ra.AnalystError):
+                ra._nvidia_chat([{"role": "user", "content": "q"}], attempts=2)
+        finally:
+            ra.requests.post = real
+
+    def test_answer_is_tidied(self):
+        out, _ = self.run_with([{"choices": [{"message": {"content": "**Verdict:** NOR 77.137 s, non‑stop → P1"}}]}])
+        self.assertEqual(out["answer"], "Verdict: NOR 77.137 s, non-stop -> P1")
+
+    def test_tool_error_and_turn_cap(self):
+        bad = {"choices": [{"message": {"role": "assistant", "content": "",
+                                        "tool_calls": [{"id": "c", "type": "function",
+                                                        "function": {"name": "get_team_race",
+                                                                     "arguments": '{"season": 2025, "round": 1, "team": "Ferrari"}'}}]}}]}
+        out, _ = self.run_with([bad, {"choices": [{"message": {"content": "No Ferrari data in this race."}}]}])
+        self.assertTrue(out["tools_used"][0]["error"])
+        self.assertEqual(out["answer"], "No Ferrari data in this race.")
+        out, _ = self.run_with([bad] * ra.MAX_TURNS)
+        self.assertIn("ran out of steps", out["answer"])
+
+
 if __name__ == "__main__":
     unittest.main()

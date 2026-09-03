@@ -363,7 +363,10 @@ for _t in TOOLS:
 
 def execute_tool(name: str, args: dict, ctx_provider) -> dict:
     """Run one tool. Raises ValueError for user-fixable problems (unknown driver/team/lap)."""
-    args = dict(args or {})
+    # models fill optional slots with the string "None"/"null" instead of JSON null, which would
+    # otherwise be looked up as a driver name and answer "no pit stops recorded for None"
+    args = {k: (None if isinstance(v, str) and v.strip().lower() in ("", "none", "null", "n/a") else v)
+            for k, v in (args or {}).items()}
     if name in ("get_driver_rating", "get_driver_dna"):
         from app.services import driver_intelligence as di
         if name == "get_driver_rating":

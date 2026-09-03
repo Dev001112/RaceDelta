@@ -13,10 +13,15 @@ sys.path.append(os.getcwd())
 logging.basicConfig(level=logging.INFO)
 
 # Import the resolver
-from app.utils.season_resolver import resolve_seasons, _build_seasons_dropdown
+from app.utils.season_resolver import resolve_seasons, _build_seasons_dropdown, _season_cache
 
 class TestSeasonTransition(unittest.TestCase):
-    
+
+    def setUp(self):
+        # resolve_seasons() memoises for 30 minutes, so a real call from any earlier test
+        # would be served from cache and ignore this test's mocked clock
+        _season_cache.update(expires_at=0, value=None)
+
     @patch('app.utils.season_resolver.fastf1.get_event_schedule')
     @patch('app.utils.season_resolver.datetime')
     def test_pre_season_behavior(self, mock_datetime, mock_get_schedule):
