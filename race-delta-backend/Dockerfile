@@ -10,7 +10,9 @@ COPY . .
 ENV OPENF1_BASE=https://api.openf1.org/v1
 ENV OPENF1_TIMEOUT=10
 ENV OPENF1_CACHE_TTL=300
-ENV DATABASE_URL=sqlite:////tmp/racedelta.db
+# Baked, pre-ingested SQLite: /tmp is wiped on every spin-down and re-ingesting a season
+# from FastF1 takes minutes at 0.1 CPU, so the data ships in the image instead.
+ENV DATABASE_URL=sqlite:////app/data/racedelta.db
 ENV PORT=8000
 
 # The baked .cache/ (16MB of precomputed JSON) is the whole point: a free instance
