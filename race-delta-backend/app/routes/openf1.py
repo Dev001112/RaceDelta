@@ -24,7 +24,7 @@ def _meetings(year):
     params = {"year": year} if year else {}
     meetings = cached_openf1_get("meetings", params=params) or []
     meetings = [m for m in meetings
-                if "test" not in m.get("meeting_name", "").lower() and not m.get("is_cancelled")]
+                if "test" not in (m.get("meeting_name") or "").lower() and not m.get("is_cancelled")]
     meetings = sorted(meetings, key=lambda x: x.get("date_start", ""))
 
     enriched = []

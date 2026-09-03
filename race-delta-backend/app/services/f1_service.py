@@ -315,7 +315,7 @@ def get_driver_laps(driver_code: str) -> Dict:
             return {"driver": driver_code, "laps": [], "source": "fallback", "error": "No sessions found"}
         
         # Filter for race sessions and get most recent
-        race_sessions = [s for s in sessions if s.get("session_name", "").lower() == "race"]
+        race_sessions = [s for s in sessions if (s.get("session_name") or "").lower() == "race"]
         if not race_sessions:
             return {"driver": driver_code, "laps": [], "source": "fallback", "error": "No race sessions found"}
         
@@ -450,7 +450,7 @@ def get_driver_standings(season: str = "current") -> Dict:
             if all_sessions:
                 # Filter for race sessions manually
                 sessions = [s for s in all_sessions 
-                           if s.get("session_name", "").lower() == "race" 
+                           if (s.get("session_name") or "").lower() == "race" 
                            and str(year) in str(s.get("date_start", ""))]
         
         if not sessions or len(sessions) == 0:
@@ -458,7 +458,7 @@ def get_driver_standings(season: str = "current") -> Dict:
             return {"standings": _get_fallback_standings(), "season": year, "source": "fallback"}
         
         # Filter for race sessions
-        race_sessions = [s for s in sessions if s.get("session_name", "").lower() == "race"]
+        race_sessions = [s for s in sessions if (s.get("session_name") or "").lower() == "race"]
         print(f"Found {len(race_sessions)} race sessions")
         
         if not race_sessions:
@@ -740,7 +740,7 @@ def get_tyre_data(session_key: Optional[str] = None, driver_number: Optional[int
         if not session_key:
             sessions = _api_request("sessions")
             if sessions:
-                race_sessions = [s for s in sessions if s.get("session_name", "").lower() == "race"]
+                race_sessions = [s for s in sessions if (s.get("session_name") or "").lower() == "race"]
                 if race_sessions:
                     latest = sorted(race_sessions, key=lambda x: x.get("date_start", ""), reverse=True)[0]
                     session_key = latest.get("session_key")

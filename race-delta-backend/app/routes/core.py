@@ -89,8 +89,8 @@ def drivers_list():
                 continue
 
             # Only include drivers with essential info
-            first_name = driver.get("first_name", "").strip()
-            last_name = driver.get("last_name", "").strip()
+            first_name = (driver.get("first_name") or "").strip()
+            last_name = (driver.get("last_name") or "").strip()
             if not first_name or not last_name:
                 continue
 
