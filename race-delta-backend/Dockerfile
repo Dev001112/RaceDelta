@@ -20,6 +20,9 @@ ENV RACEDELTA_CACHE_DIR=/app/.cache
 ENV FASTF1_CACHE_DIR=/tmp/fastf1_cache
 # Past races never change; keep the baked entries fresh instead of rebuilding on every wake.
 ENV RACEDELTA_CACHE_TTL=2592000
+# Baked entries are up to 83 days past expiry; without a matching grace, 59 of the 294
+# would refetch live. Historical F1 results don't change, so serving them stale is correct.
+ENV RACEDELTA_CACHE_STALE_GRACE=31536000
 # The startup warmer would fight the request that woke the instance for the same 0.1 CPU.
 ENV RACEDELTA_WARM_CACHE=0
 
