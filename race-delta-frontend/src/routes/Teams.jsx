@@ -44,7 +44,7 @@ export default function Teams() {
         </div>
       </div>
 
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4" data-tour="team-grid">
         {teams.map((team) => (
           <TeamCard
             key={team.constructor_id}

@@ -5,6 +5,7 @@ import {
   fetchConstructorStandings,
 } from "../api/client";
 import { useSeason } from "../context/SeasonContext";
+import PageHeader from "../components/PageHeader";
 
 /* ---------------- TEAM LOGOS ---------------- */
 const TEAM_LOGOS = {
@@ -69,87 +70,36 @@ function Avatar({ src, size = 44, onClick }) {
 /* ---------------- DRIVERS TABLE ---------------- */
 function DriversTable({ standings, season }) {
   const navigate = useNavigate();
-
   return (
-    <table className="w-full border-collapse">
+    <table className="timing-table">
       <thead>
-        <tr className="text-left text-slate-400 border-b border-slate-800">
-          <th className="py-3">Pos</th>
-          <th>Driver</th>
-          <th>Team</th>
-          <th className="text-right">Pts</th>
-          <th className="text-right">Wins</th>
-        </tr>
+        <tr><th>Pos</th><th>Driver</th><th>Team</th><th className="num">Pts</th><th className="num">Wins</th></tr>
       </thead>
-
       <tbody>
-        {standings.map((d) => {
-          const teamLogo = TEAM_LOGOS[d.team] || null;
-
-          return (
-            <tr
-              key={d.position}
-              className="border-b border-slate-900 hover:bg-slate-900/40"
-            >
-              <td className="py-4 font-semibold">{d.position}</td>
-
-              {/* DRIVER */}
-              <td className="py-4">
-                <div className="flex items-center gap-3">
-                  <Avatar
-                    src={d.headshot_url}
-                    size={48}
-                    onClick={() =>
-                      navigate(`/driver/${d.driver_code}/season/${season || "current"}`)
-                    }
-                  />
-                  <div>
-                    <div
-                      className="font-semibold text-white hover:underline cursor-pointer"
-                      onClick={() =>
-                        navigate(`/driver/${d.driver_code}/season/${season || "current"}`)
-                      }
-                    >
-                      {d.driver_name}
-                    </div>
-                    <div className="text-xs text-slate-400">
-                      {d.driver_code}
-                    </div>
-                  </div>
+        {standings.map((d) => (
+          <tr key={d.position} className="cursor-pointer"
+              onClick={() => navigate(`/driver/${d.driver_code}/season/${season || "current"}`)}>
+            <td className="pos">{String(d.position).padStart(2, "0")}</td>
+            <td>
+              <div className="flex items-center gap-3">
+                <Avatar src={d.headshot_url} size={40} />
+                <div>
+                  <div className="font-broadcast font-black uppercase text-white text-lg leading-tight">{d.driver_name}</div>
+                  <div className="text-muted text-sm">{d.driver_code}</div>
                 </div>
-              </td>
-
-              {/* TEAM */}
-              <td className="py-4">
-                <div className="flex items-center gap-3">
-                  <Avatar
-                    src={teamLogo}
-                    size={36}
-                    onClick={() =>
-                      navigate(`/teams/${d.constructor_id}`)
-                    }
-                  />
-                  <span
-                    className="hover:underline cursor-pointer"
-                    onClick={() =>
-                      navigate(`/teams/${d.constructor_id}`)
-                    }
-                  >
-                    {d.team}
-                  </span>
-                </div>
-              </td>
-
-              <td className="py-4 text-right font-semibold">
-                {d.points}
-              </td>
-
-              <td className="py-4 text-right text-slate-300">
-                {d.wins}
-              </td>
-            </tr>
-          );
-        })}
+              </div>
+            </td>
+            <td>
+              <span className="inline-flex items-center gap-2 hover:underline"
+                    onClick={(e) => { e.stopPropagation(); navigate(`/teams/${d.constructor_id}`); }}>
+                <Avatar src={TEAM_LOGOS[d.team] || null} size={28} />
+                {d.team}
+              </span>
+            </td>
+            <td className="num font-broadcast font-black text-white text-xl">{d.points}</td>
+            <td className="num text-muted">{d.wins}</td>
+          </tr>
+        ))}
       </tbody>
     </table>
   );
@@ -158,59 +108,25 @@ function DriversTable({ standings, season }) {
 /* ---------------- CONSTRUCTORS TABLE ---------------- */
 function ConstructorsTable({ teams }) {
   const navigate = useNavigate();
-
   return (
-    <table className="w-full border-collapse">
+    <table className="timing-table">
       <thead>
-        <tr className="text-left text-slate-400 border-b border-slate-800">
-          <th className="py-3">Pos</th>
-          <th>Team</th>
-          <th className="text-right">Pts</th>
-          <th className="text-right">Wins</th>
-        </tr>
+        <tr><th>Pos</th><th>Team</th><th className="num">Pts</th><th className="num">Wins</th></tr>
       </thead>
-
       <tbody>
-        {teams.map((t) => {
-          const logo = TEAM_LOGOS[t.team] || null;
-
-          return (
-            <tr
-              key={t.position}
-              className="border-b border-slate-900 hover:bg-slate-900/40"
-            >
-              <td className="py-4 font-semibold">{t.position}</td>
-
-              <td className="py-4">
-                <div className="flex items-center gap-3">
-                  <Avatar
-                    src={logo}
-                    size={40}
-                    onClick={() =>
-                      navigate(`/teams/${t.constructor_id}`)
-                    }
-                  />
-                  <span
-                    className="font-semibold hover:underline cursor-pointer"
-                    onClick={() =>
-                      navigate(`/teams/${t.constructor_id}`)
-                    }
-                  >
-                    {t.team}
-                  </span>
-                </div>
-              </td>
-
-              <td className="py-4 text-right font-semibold">
-                {t.points}
-              </td>
-
-              <td className="py-4 text-right text-slate-300">
-                {t.wins}
-              </td>
-            </tr>
-          );
-        })}
+        {teams.map((t) => (
+          <tr key={t.position} className="cursor-pointer" onClick={() => navigate(`/teams/${t.constructor_id}`)}>
+            <td className="pos">{String(t.position).padStart(2, "0")}</td>
+            <td>
+              <div className="flex items-center gap-3">
+                <Avatar src={TEAM_LOGOS[t.team] || null} size={36} />
+                <span className="font-broadcast font-black uppercase text-white text-lg">{t.team}</span>
+              </div>
+            </td>
+            <td className="num font-broadcast font-black text-white text-xl">{t.points}</td>
+            <td className="num text-muted">{t.wins}</td>
+          </tr>
+        ))}
       </tbody>
     </table>
   );
@@ -228,46 +144,45 @@ export default function Stats() {
     async function load() {
       if (!season) return;
       setLoading(true);
-
       const [driversRes, constructorsRes] = await Promise.all([
         fetchDriverStandings(season),
         fetchConstructorStandings(season),
       ]);
-
       setDriverStandings(driversRes.standings || []);
       setConstructorStandings(constructorsRes.standings || []);
       setLoading(false);
     }
-
     load();
   }, [season]);
 
-  if (loading) {
-    return <div className="p-8 text-slate-400">Loading standings…</div>;
-  }
+  const rows = view === "drivers" ? driverStandings : constructorStandings;
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-semibold text-white">
-          F1 Standings
-        </h1>
+    <div className="py-6 space-y-6">
+      <PageHeader kicker="Championship standings" title="F1 Standings" season={season}
+        subtitle="Drivers' and constructors' tables for the selected season. Click a row to open the driver or team."
+        actions={
+          <select value={view} onChange={(e) => setView(e.target.value)} className="select-broadcast" aria-label="Standings table">
+            <option value="drivers">Drivers</option>
+            <option value="constructors">Constructors</option>
+          </select>
+        } />
 
-        <select
-          value={view}
-          onChange={(e) => setView(e.target.value)}
-          className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm"
-        >
-          <option value="drivers">Drivers</option>
-          <option value="constructors">Constructors</option>
-        </select>
-      </div>
-
-      {view === "drivers" ? (
-        <DriversTable standings={driverStandings} season={season} />
-      ) : (
-        <ConstructorsTable teams={constructorStandings} />
-      )}
+      <section className="panel" data-tour="standings">
+        <div className="panel-head">
+          <div>
+            <h2 className="panel-title">{view === "drivers" ? "Drivers' championship" : "Constructors' championship"}</h2>
+            <p className="panel-subtitle">{loading ? "Loading…" : `${rows.length} classified`}</p>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          {loading
+            ? <p className="p-4 text-muted animate-pulse">Loading standings…</p>
+            : view === "drivers"
+              ? <DriversTable standings={driverStandings} season={season} />
+              : <ConstructorsTable teams={constructorStandings} />}
+        </div>
+      </section>
     </div>
   );
 }

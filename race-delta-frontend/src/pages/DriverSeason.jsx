@@ -1,182 +1,103 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { fetchDriverSeason } from "../api/client";
-
+import { useSeason } from "../context/SeasonContext";
+import PageHeader from "../components/PageHeader";
 import DriverHeader from "../components/DriverHeader";
 import RadarComparison from "../components/RadarComparison";
 import PointsTrend from "../components/PointsTrend";
 import QualiRaceDelta from "../components/QualiRaceDelta";
 
-const cardStyle = {
-  background: "linear-gradient(180deg, #121826, #0F1522)",
-  borderRadius: 18,
-  padding: "1.5rem",
-  boxShadow: "0 20px 40px rgba(0,0,0,0.45)",
-  border: "1px solid rgba(255,255,255,0.04)"
-};
-
-const SEASONS = [
-  { label: "Current", value: "current" },
-  { label: "2024", value: "2024" },
-  { label: "2023", value: "2023" }
-];
+function Panel({ title, subtitle, children, tourId, className = "" }) {
+  return (
+    <section className={`panel ${className}`} data-tour={tourId}>
+      {title && (
+        <div className="panel-head">
+          <div>
+            <h2 className="panel-title">{title}</h2>
+            {subtitle && <p className="panel-subtitle">{subtitle}</p>}
+          </div>
+        </div>
+      )}
+      <div className="panel-body">{children}</div>
+    </section>
+  );
+}
 
 export default function DriverSeason() {
   const { code, season } = useParams();
   const navigate = useNavigate();
+  const { seasonOptions } = useSeason();
 
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
 
-  const resolvedSeason =
-    season === "current" ? new Date().getFullYear() : Number(season);
+  const resolvedSeason = season === "current" ? new Date().getFullYear() : Number(season);
+  const options = seasonOptions.length
+    ? seasonOptions.map((o) => ({ label: o.label, value: String(o.value) }))
+    : [{ label: "Current", value: "current" }, { label: String(resolvedSeason - 1), value: String(resolvedSeason - 1) }];
 
   useEffect(() => {
     setData(null);
     setError(null);
-
-    fetchDriverSeason(code, resolvedSeason)
-      .then(setData)
-      .catch((e) => setError(e.message));
+    fetchDriverSeason(code, resolvedSeason).then(setData).catch((e) => setError(e.message));
   }, [code, resolvedSeason]);
 
-  if (error) {
-    return <p style={{ color: "#ffb4b4" }}>{error}</p>;
-  }
+  const header = (
+    <PageHeader
+      kicker="Driver season analysis"
+      title={data?.driver?.name || code}
+      season={resolvedSeason}
+      subtitle="Season form from race results: finishing consistency, qualifying-versus-race deltas and points progression."
+      actions={
+        <select className="select-broadcast" value={String(season)} onChange={(e) => navigate(`/driver/${code}/season/${e.target.value}`)} aria-label="Season">
+          {options.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+        </select>
+      }
+    />
+  );
 
-  if (!data) {
-    return <p style={{ color: "#9CA3AF" }}>Loading season analytics…</p>;
-  }
+  if (error) return <div className="py-6">{header}<div className="panel panel-plain border-f1/40 p-4 text-f1">{error}</div></div>;
+  if (!data) return <div className="py-6">{header}<p className="text-muted animate-pulse">Loading season analytics…</p></div>;
 
-  const { driver, metrics, radar } = data;
+  const { driver, metrics, radar, teammate } = data;
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#0B0F14",
-        padding: "1.5rem 2.25rem",
-        color: "#E5E7EB"
-      }}
-    >
-      {/* ================= HEADER BAR ================= */}
-      <div
-        style={{
-          maxWidth: 1300,
-          margin: "0 auto 1rem auto",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center"
-        }}
-      >
-        <h2 style={{ margin: 0, fontSize: 20 }}>
-          Driver Season Analysis
-        </h2>
+    <div className="py-6 space-y-6">
+      {header}
 
-        <select
-          value={season}
-          onChange={(e) =>
-            navigate(`/driver/${code}/season/${e.target.value}`)
-          }
-          style={{
-            background: "#0F1522",
-            color: "#E5E7EB",
-            border: "1px solid rgba(255,255,255,0.12)",
-            borderRadius: 8,
-            padding: "6px 10px",
-            fontSize: 13,
-            cursor: "pointer"
-          }}
-        >
-          {SEASONS.map((s) => (
-            <option key={s.value} value={s.value}>
-              {s.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* ================= TOP GRID ================= */}
-      <div
-        style={{
-          maxWidth: 1300,
-          margin: "0 auto 1.25rem auto",
-          display: "grid",
-          gridTemplateColumns: "1fr 1.8fr",
-          gap: "1.25rem"
-        }}
-      >
-        {/* DRIVER CARD */}
-        <div style={cardStyle}>
-          <DriverHeader
-            driver={driver}
-            season={resolvedSeason}
-            points={Number.isFinite(metrics.total_points) ? metrics.total_points : 0}
-            position={metrics.championship_position}
-          />
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
-              gap: "0.75rem",
-              marginTop: "1rem",
-              fontSize: 12,
-              color: "#9CA3AF"
-            }}
-          >
-            <div>
-              <strong style={{ color: "#E5E7EB" }}>
-                {metrics.wins ?? 0}
-              </strong>
-              <div>Wins</div>
-            </div>
-
-            <div>
-              <strong style={{ color: "#E5E7EB" }}>
-                {metrics.podiums ?? 0}
-              </strong>
-              <div>Podiums</div>
-            </div>
-
-            <div>
-              <strong style={{ color: "#E5E7EB" }}>
-                {metrics.total_points ?? 0}
-              </strong>
-              <div>Points</div>
-            </div>
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.6fr] gap-6">
+        <Panel tourId="driver-card">
+          <DriverHeader driver={driver} season={resolvedSeason}
+                        points={Number.isFinite(metrics.total_points) ? metrics.total_points : 0}
+                        position={metrics.championship_position} />
+          <div className="grid grid-cols-3 gap-3 mt-5">
+            <div className="stat-tile"><div className="stat-label">Wins</div><div className="stat-value">{metrics.wins ?? 0}</div></div>
+            <div className="stat-tile"><div className="stat-label">Podiums</div><div className="stat-value">{metrics.podiums ?? 0}</div></div>
+            <div className="stat-tile"><div className="stat-label">Points</div><div className="stat-value">{metrics.total_points ?? 0}</div></div>
           </div>
-        </div>
+          <div className="grid grid-cols-3 gap-3 mt-3">
+            <div className="stat-tile"><div className="stat-label">Avg finish</div><div className="stat-value">{metrics.avg_finish ?? "–"}</div></div>
+            <div className="stat-tile"><div className="stat-label">DNFs</div><div className="stat-value">{metrics.dnf_count ?? 0}</div></div>
+            <div className="stat-tile"><div className="stat-label">Pts / race</div><div className="stat-value">{metrics.points_per_race ?? 0}</div></div>
+          </div>
+        </Panel>
 
-        {/* RADAR CARD */}
-        <div style={cardStyle}>
-          <h3 style={{ margin: 0, fontSize: 16 }}>
-            Season Performance
-          </h3>
-
-          <div style={{ height: 260 }}>
+        <Panel tourId="radar" title="Season performance"
+               subtitle={teammate?.driver?.code ? `Radar scores out of 100 · teammate ${teammate.driver.code} on the same scale` : "Radar scores out of 100"}>
+          <div className="h-[300px]">
             <RadarComparison radar={radar || {}} />
           </div>
-        </div>
+        </Panel>
       </div>
 
-      {/* ================= BOTTOM GRID ================= */}
-      <div
-        style={{
-          maxWidth: 1300,
-          margin: "0 auto",
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "1.75rem"
-        }}
-      >
-        <div style={cardStyle}>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Panel tourId="points-trend" title="Points trend" subtitle="Points scored per round">
           <PointsTrend pointsByRace={metrics.points_by_race || []} />
-        </div>
-
-        <div style={cardStyle}>
+        </Panel>
+        <Panel tourId="quali-delta" title="Qualifying vs race" subtitle="Places gained (green) or lost (red) from grid to flag">
           <QualiRaceDelta deltas={metrics.q_vs_race?.by_race || []} />
-        </div>
+        </Panel>
       </div>
     </div>
   );

@@ -60,7 +60,7 @@ export default function TeamDetail() {
       </button>
 
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row justify-between items-start gap-8">
+      <div className="flex flex-col md:flex-row justify-between items-start gap-8" data-tour="team-header">
 
         {/* Team Identity */}
         <div className="flex items-center gap-6">

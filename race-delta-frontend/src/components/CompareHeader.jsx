@@ -1,74 +1,26 @@
 import { TEAM_LOGOS } from "../lib/teamLogos";
 
-export default function CompareHeader({
-  leftDriver,
-  rightDriver,
-  onCompare,
-  disabled
-}) {
+function DriverPanel({ driver }) {
   return (
-    <div className="grid grid-cols-[1fr_auto_1fr] gap-6 items-center">
-      
-      {/* LEFT DRIVER */}
-      <div className="bg-[#0f172a] rounded-xl p-4 flex items-center gap-4">
-        <img
-          src={leftDriver.photo}
-          alt={leftDriver.name}
-          className="w-16 h-16 rounded-full object-cover"
-        />
-
-        <div>
-          <h3 className="font-semibold">
-            {leftDriver.name}
-          </h3>
-          <p className="text-sm text-gray-400">
-            {leftDriver.team}
-          </p>
-        </div>
-
-        {TEAM_LOGOS[leftDriver.team] && (
-          <img
-            src={TEAM_LOGOS[leftDriver.team]}
-            alt={leftDriver.team}
-            className="ml-auto h-10"
-          />
-        )}
+    <div className="panel panel-plain p-4 flex items-center gap-4 min-w-0">
+      {driver.photo && <img src={driver.photo} alt={driver.name} className="w-16 h-16 object-contain bg-raised border border-line" />}
+      <div className="min-w-0">
+        <div className="font-broadcast font-black italic uppercase text-white text-xl truncate">{driver.name}</div>
+        <div className="text-muted">{driver.team}</div>
       </div>
+      {TEAM_LOGOS[driver.team] && <img src={TEAM_LOGOS[driver.team]} alt={driver.team} className="ml-auto h-10 hidden sm:block" />}
+    </div>
+  );
+}
 
-      {/* COMPARE BUTTON */}
-      <button
-        onClick={onCompare}
-        disabled={disabled}
-        className="bg-red-600 hover:bg-red-700 disabled:opacity-50 px-6 py-3 rounded-lg font-semibold"
-      >
-        COMPARE →
-      </button>
-
-      {/* RIGHT DRIVER */}
-      <div className="bg-[#0f172a] rounded-xl p-4 flex items-center gap-4">
-        <img
-          src={rightDriver.photo}
-          alt={rightDriver.name}
-          className="w-16 h-16 rounded-full object-cover"
-        />
-
-        <div>
-          <h3 className="font-semibold">
-            {rightDriver.name}
-          </h3>
-          <p className="text-sm text-gray-400">
-            {rightDriver.team}
-          </p>
-        </div>
-
-        {TEAM_LOGOS[rightDriver.team] && (
-          <img
-            src={TEAM_LOGOS[rightDriver.team]}
-            alt={rightDriver.team}
-            className="ml-auto h-10"
-          />
-        )}
-      </div>
+export default function CompareHeader({ leftDriver, rightDriver, onCompare, disabled }) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-4 items-center">
+      <DriverPanel driver={leftDriver} />
+      {onCompare
+        ? <button type="button" onClick={onCompare} disabled={disabled} className="btn-primary justify-center">Run comparison →</button>
+        : <div className="font-broadcast font-black italic text-3xl text-f1 text-center px-2" aria-hidden="true">VS</div>}
+      <DriverPanel driver={rightDriver} />
     </div>
   );
 }

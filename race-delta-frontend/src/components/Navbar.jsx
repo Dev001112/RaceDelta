@@ -1,7 +1,8 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import SeasonSelector from "./SeasonSelector";
-import { BarChart3, Gauge, Users, Flag, Brain, Route, MessageSquare } from "lucide-react";
+import { BarChart3, Gauge, Users, Flag, Brain, Route, MessageSquare, HelpCircle } from "lucide-react";
+import { startTour } from "./Tour";
 
 export default function Navbar() {
   const location = useLocation();
@@ -31,20 +32,20 @@ export default function Navbar() {
               <div className="text-white font-black uppercase tracking-[0.08em] text-base italic">
                 RaceDelta
               </div>
-              <div className="text-[10px] uppercase tracking-[0.15em] text-[#a1a1aa] font-bold">
+              <div className="text-[12px] uppercase tracking-[0.15em] text-[#a1a1aa] font-bold">
                 Telemetry Station
               </div>
             </div>
           </Link>
 
-          <div className="hidden md:flex items-center border border-[#22272c] bg-[#070809] p-0.5">
+          <div className="hidden md:flex items-center border border-[#22272c] bg-[#070809] p-0.5" data-tour="nav">
             {navLinks.map(({ label, path, icon: Icon }) => {
               const active = isActive(path);
               return (
                 <Link
                   key={path}
                   to={path}
-                  className={`flex items-center gap-1.5 px-4 py-2 text-xs font-black uppercase tracking-[0.05em] font-broadcast italic transition-all ${
+                  className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-black uppercase tracking-[0.05em] font-broadcast italic transition-all ${
                     active
                       ? "bg-[#ff1801] text-white"
                       : "text-[#a1a1aa] hover:bg-[#121518] hover:text-white"
@@ -57,7 +58,11 @@ export default function Navbar() {
             })}
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3" data-tour="season">
+            <button type="button" onClick={startTour} title="Show the guide for this page"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 text-sm font-black uppercase tracking-[0.05em] font-broadcast italic border border-[#22272c] text-[#b4b7bf] hover:text-white hover:border-[#3a4048] transition-colors">
+              <HelpCircle size={14} /> Guide
+            </button>
             <SeasonSelector />
           </div>
         </nav>
@@ -67,7 +72,7 @@ export default function Navbar() {
             <Link
               key={path}
               to={path}
-              className={`px-3 py-1.5 text-xs font-black uppercase tracking-[0.05em] font-broadcast italic whitespace-nowrap ${
+              className={`px-3 py-2 text-sm font-black uppercase tracking-[0.05em] font-broadcast italic whitespace-nowrap ${
                 isActive(path)
                   ? "bg-[#ff1801] text-white"
                   : "bg-[#121518] text-[#a1a1aa] border border-[#22272c]"

@@ -34,16 +34,16 @@ def safe_number(val, default=0):
 # L1 — DRIVER SEASON METRICS
 # --------------------------------------------------
 def get_driver_season_metrics(season: int, driver_code: str):
+    """L1 season metrics, cached: finished seasons never expire, the current one refreshes in the background."""
+    return cache_store.cached("derived", f"l1_metrics:{season}:{driver_code.upper()}",
+                              cache_store.season_ttl(season), lambda: _build_driver_season_metrics(season, driver_code))
+
+
+def _build_driver_season_metrics(season: int, driver_code: str):
     """
     L1 – Season-level analytics using FastF1
     JSON-safe, driver-agnostic
     """
-
-    cache_key = f"l1_metrics:{season}:{driver_code.upper()}"
-    cached = cache_store.get("derived", cache_key)
-    if cached is not None:
-        return cached
-
     schedule = fastf1.get_event_schedule(season)
 
     # Exclude testing
@@ -165,7 +165,6 @@ def get_driver_season_metrics(season: int, driver_code: str):
         if q_deltas else 0
     )
 
-    cache_store.set("derived", cache_key, metrics, DERIVED_CACHE_TTL)
     return metrics
 
 
@@ -173,16 +172,16 @@ def get_driver_season_metrics(season: int, driver_code: str):
 # OPTIONAL — TEAMMATE DETECTION (SAFE)
 # --------------------------------------------------
 def get_teammate_code(season: int, driver_code: str):
+    """Teammate code (cached like the metrics), or None."""
+    return cache_store.cached("derived", f"teammate:{season}:{driver_code.upper()}",
+                              cache_store.season_ttl(season), lambda: _find_teammate(season, driver_code))
+
+
+def _find_teammate(season: int, driver_code: str):
     """
     Detect teammate based on first race where driver appears.
     Returns None safely if not found.
     """
-
-    cache_key = f"teammate:{season}:{driver_code.upper()}"
-    cached = cache_store.get("derived", cache_key)
-    if cached is not None:
-        return cached
-
     schedule = fastf1.get_event_schedule(season)
     races = schedule[schedule["EventFormat"] != "testing"]
     event_dates = races["EventDate"]
@@ -209,11 +208,9 @@ def get_teammate_code(season: int, driver_code: str):
 
             if not teammate_rows.empty:
                 teammate = teammate_rows.iloc[0]["Abbreviation"]
-                cache_store.set("derived", cache_key, teammate, DERIVED_CACHE_TTL)
                 return teammate
 
         except Exception:
             continue
 
-    cache_store.set("derived", cache_key, None, DERIVED_CACHE_TTL)
     return None

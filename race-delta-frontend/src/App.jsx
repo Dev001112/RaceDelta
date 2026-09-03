@@ -4,6 +4,7 @@ import { AnimatePresence } from "framer-motion";
 
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import Tour from "./components/Tour";
 
 import Home from "./routes/Home";
 import Race from "./routes/Race";
@@ -71,6 +72,7 @@ export default function App() {
       </main>
 
       <Footer />
+      <Tour />
     </div>
   );
 }

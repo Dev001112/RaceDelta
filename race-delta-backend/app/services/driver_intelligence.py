@@ -207,12 +207,7 @@ def _cached(key_parts, build):
     season = key_parts[1]
     n_rows = DriverRaceFeature.query.filter_by(season=season).count()
     key = ":".join(str(p) for p in key_parts) + f":rows={n_rows}"
-    cached = cache_store.get("derived", key)
-    if cached is not None:
-        return cached
-    value = build()
-    cache_store.set("derived", key, value, CACHE_TTL)
-    return value
+    return cache_store.cached("derived", key, cache_store.LONG_TTL, build)
 
 
 def _with_meta(items, meta):

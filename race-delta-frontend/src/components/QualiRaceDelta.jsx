@@ -19,11 +19,6 @@ export default function QualiRaceDelta({ deltas }) {
 
   return (
     <div>
-      <h3 style={{ marginBottom: 4 }}>Qualifying → Race Delta</h3>
-      <p style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 12 }}>
-        Positions gained or lost on race day
-      </p>
-
       <div style={{ height: 240 }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data}>

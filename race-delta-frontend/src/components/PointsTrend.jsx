@@ -16,20 +16,6 @@ export default function PointsTrend({ pointsByRace }) {
 
   return (
     <>
-      {/* TITLE */}
-      <h3 style={{ marginBottom: 4 }}>Points Over Season</h3>
-
-      {/* SUBTITLE */}
-      <p
-        style={{
-          fontSize: 12,
-          color: "#9CA3AF",
-          marginBottom: 12
-        }}
-      >
-        Race-by-race consistency and volatility
-      </p>
-
       {/* CHART */}
       <ResponsiveContainer width="100%" height={280}>
         <LineChart data={data}>

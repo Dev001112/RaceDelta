@@ -13,7 +13,7 @@ from scripts.ergast_standings import (
     get_constructor_standings,
 )
 
-from app.services.f1_service import get_season_drivers, normalize_team
+from app.services.f1_service import get_season_drivers, normalize_team, _api_request as openf1_request
 from app.services import cache_store
 from app.services.driver_comparison_fastf1 import compare_drivers_season
 from app.services.l1_season_fastf1 import (
@@ -26,6 +26,9 @@ from app.utils.season_resolver import resolve_seasons, get_season_for_drivers
 from app.services.feature_store import ensure_race_features, features_for_race, features_for_driver
 from app.services.driver_intelligence import rating_for_season, dna_for_season, clusters_for_season
 from app.services import strategy_lab
+from app.services import compare_lab
+from app.services import compare_verdict
+from app.services import track_map
 from app.services import race_analyst
 
 # ==================================================
@@ -49,26 +52,10 @@ def get_openf1_base():
     return current_app.config.get("OPENF1_BASE", "https://api.openf1.org/v1")
 
 
-def cached_openf1_get(path, params=None, ttl=60 * 60 * 6):
-    openf1_base = get_openf1_base()
-    timeout = current_app.config.get("OPENF1_TIMEOUT", 10)
-    url = f"{openf1_base.rstrip('/')}/{path.lstrip('/')}"
-    normalized_params = dict(sorted((params or {}).items()))
-    cache_key = f"{url}:{normalized_params}"
-    cached = cache_store.get("openf1", cache_key)
-    if cached is not None:
-        return cached
-
-    try:
-        resp = requests.get(url, params=params, timeout=timeout)
-    except requests.RequestException:
-        return None
-
-    if not resp.ok:
-        return None
-    data = resp.json()
-    cache_store.set("openf1", cache_key, data, ttl)
-    return data
+def cached_openf1_get(path, params=None, ttl=None):
+    """OpenF1 GET via the shared fetcher (retries, stale-while-revalidate, negative cache).
+    Data of a finished season (params carry `year`) never expires."""
+    return openf1_request(path, params, ttl=ttl or cache_store.season_ttl((params or {}).get("year")))
 
 
 def resolve_request_season(raw_season):
@@ -497,6 +484,73 @@ def compare_drivers_timeline():
             "message": str(e),
             "type": type(e).__name__
         }), 500
+
+# ==================================================
+# COMPARE LAB — race / track / condition comparisons (feature store only)
+# ==================================================
+
+@api_bp.route("/compare/races", methods=["GET"])
+def compare_races():
+    """Every ingested race with the metadata the Compare page filters on."""
+    return jsonify({"races": compare_lab.list_races()})
+
+
+@api_bp.route("/compare/drivers/races", methods=["GET"])
+def compare_drivers_on_races():
+    """?driver1&driver2&races=2026-1,2025-8 -> per-race lines plus aggregates."""
+    d1, d2, spec = request.args.get("driver1"), request.args.get("driver2"), request.args.get("races", "")
+    if not d1 or not d2 or not spec:
+        return jsonify({"error": "driver1, driver2 and races are required"}), 400
+    try:
+        races = [tuple(int(x) for x in item.split("-")) for item in spec.split(",") if item]
+    except ValueError:
+        return jsonify({"error": "races must look like 2026-1,2025-8"}), 400
+    return jsonify(compare_lab.compare_on_races(d1, d2, races))
+
+
+def _no_store_while_pending(payload):
+    """A 'still building' answer must not sit in the browser cache, or the page's polling never sees the result."""
+    resp = jsonify(payload)
+    if payload.get("pending"):
+        resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
+@api_bp.route("/compare/verdict", methods=["GET"])
+def compare_verdict_route():
+    """?driver1&driver2&races=2026-1,2025-8[&context=] -> who is better and how (rules, model prose when configured)."""
+    d1, d2, spec = request.args.get("driver1"), request.args.get("driver2"), request.args.get("races", "")
+    context = (request.args.get("context") or "")[:80]
+    if not d1 or not d2 or not spec:
+        return jsonify({"error": "driver1, driver2 and races are required"}), 400
+    try:
+        races = [tuple(int(x) for x in item.split("-")) for item in spec.split(",") if item]
+    except ValueError:
+        return jsonify({"error": "races must look like 2026-1,2025-8"}), 400
+    return _no_store_while_pending(compare_verdict.for_races(d1, d2, races, context))
+
+
+@api_bp.route("/compare/track-map", methods=["GET"])
+def compare_track_map():
+    """?rounds=2026-9,2025-12 (visits of one circuit, latest first) -> outline split into sectors,
+    {'pending': true} while it is first built, or 'unavailable' when no visit's telemetry can be read."""
+    spec = request.args.get("rounds", "")
+    try:
+        candidates = [tuple(int(x) for x in item.split("-")) for item in spec.split(",") if item]
+    except ValueError:
+        candidates = []
+    if not candidates:
+        return jsonify({"error": "rounds must look like 2026-9,2025-12"}), 400
+    return _no_store_while_pending(track_map.get(candidates))
+
+
+@api_bp.route("/compare/drivers/laps", methods=["GET"])
+def compare_drivers_laps():
+    d1, d2 = request.args.get("driver1"), request.args.get("driver2")
+    season, round_num = request.args.get("season", type=int), request.args.get("round", type=int)
+    if not d1 or not d2 or not season or not round_num:
+        return jsonify({"error": "driver1, driver2, season and round are required"}), 400
+    return jsonify(compare_lab.laps_for_race(d1, d2, season, round_num))
 
 # ==================================================
 # OPENF1 PASS-THROUGHS & RACE ANALYTICS

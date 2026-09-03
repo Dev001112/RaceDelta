@@ -1,5 +1,7 @@
 # D:\RaceDelta\race-delta-backend\app\__init__.py
-from flask import Flask
+import os
+
+from flask import Flask, request
 from flask_cors import CORS
 from dotenv import load_dotenv
 
@@ -13,7 +15,7 @@ def create_app(config_name=None):
     Application factory pattern.
     Loads configuration from config.py based on FLASK_ENV environment variable.
     """
-    load_dotenv()
+    load_dotenv(override=os.getenv("FLASK_ENV", "development") != "production")   # see config.py: dev must survive a reloader re-exec
 
     app = Flask(__name__)
     
@@ -37,5 +39,19 @@ def create_app(config_name=None):
     # Register routes inside factory to avoid top-level circular imports
     from .routes import api_bp
     app.register_blueprint(api_bp, url_prefix="/api")
+
+    @app.after_request
+    def _browser_cache(resp):
+        # Data changes once a week, not once a click: let the browser reuse GET responses across navigations.
+        path = request.path
+        if (request.method == "GET" and resp.status_code == 200 and path.startswith("/api/")
+                and not path.startswith(("/api/admin", "/api/analyst", "/api/health"))):
+            resp.headers.setdefault("Cache-Control", f"public, max-age={app.config.get('BROWSER_CACHE_MAX_AGE', 300)}")
+            resp.add_etag()
+            return resp.make_conditional(request)
+        return resp
+
+    from app.services.cache_warmer import start as start_cache_warmer
+    start_cache_warmer(app)
 
     return app

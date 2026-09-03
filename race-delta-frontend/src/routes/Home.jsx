@@ -132,7 +132,7 @@ export default function Home() {
       )}
 
       {/* ================= HORIZONTAL SCHEDULE STRIP ================= */}
-      <section className="bg-[#0d0f11] border border-[#22272c] p-4 relative overflow-hidden">
+      <section className="bg-[#0d0f11] border border-[#22272c] p-4 relative overflow-hidden" data-tour="calendar">
         <div className="absolute top-0 left-0 h-full w-[3px] bg-[#ff1801]" />
         <div className="flex items-center gap-2 mb-3">
           <Calendar size={14} className="text-[#ff1801]" />
@@ -148,14 +148,14 @@ export default function Home() {
               onClick={() => navigate(`/race/${season}/${s.round}`)}
               className="flex-none w-[170px] bg-[#121518] border border-[#22272c] hover:border-[#ff1801] p-3 text-xs font-broadcast relative cursor-pointer hover:bg-[#1a1e22] transition-all"
             >
-              <div className="absolute top-0 right-0 px-1.5 py-0.5 bg-white/5 text-[9px] font-bold text-slate-500">
+              <div className="absolute top-0 right-0 px-1.5 py-0.5 bg-white/5 text-[11px] font-bold text-slate-500">
                 R{s.round}
               </div>
               <div className="font-bold text-white uppercase truncate pr-6">{s.race}</div>
-              <div className="text-slate-400 text-[10px] uppercase tracking-wider">{s.circuit}</div>
+              <div className="text-slate-400 text-[12px] uppercase tracking-wider">{s.circuit}</div>
               
               <div className="mt-2 flex items-center justify-between border-t border-[#22272c] pt-2">
-                <span className="text-[10px] text-slate-500 uppercase tracking-widest">WINNER</span>
+                <span className="text-[12px] text-slate-500 uppercase tracking-widest">WINNER</span>
                 <span className="font-black text-[#ff1801] tracking-wider">{s.winner}</span>
               </div>
             </div>
@@ -167,7 +167,7 @@ export default function Home() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* DRIVER STANDINGS: TIMING TOWER STYLE (2/3 width) */}
-        <section className="lg:col-span-2 bg-[#0d0f11] border border-[#22272c] flex flex-col relative">
+        <section className="lg:col-span-2 lg:h-0 lg:min-h-full bg-[#0d0f11] border border-[#22272c] flex flex-col relative" data-tour="tower">
           <div className="absolute top-0 left-0 h-[2px] w-full bg-[#ff1801]" />
           
           <div className="p-4 border-b border-[#22272c] flex justify-between items-center bg-[#121518]">
@@ -177,12 +177,12 @@ export default function Home() {
                 Driver Championship Tower
               </h2>
             </div>
-            <span className="text-[11px] font-bold text-slate-400 font-broadcast tracking-wider">
+            <span className="text-[13px] font-bold text-slate-400 font-broadcast tracking-wider">
               {driverStandings.length} DRIVERS ACTIVE
             </span>
           </div>
 
-          <div className="flex-1 divide-y divide-[#1e2329] overflow-y-auto max-h-[600px] scrollbar-thin">
+          <div className="flex-1 min-h-0 divide-y divide-[#1e2329] overflow-y-auto max-h-[600px] lg:max-h-none scrollbar-thin">
             {driverStandings.map((d) => {
               const teamColor = d.team_colour || getTeamColor(d.team || d.constructor_id);
               
@@ -217,7 +217,7 @@ export default function Home() {
                         <div className="text-sm text-slate-300 font-bold uppercase tracking-wide group-hover:text-white transition-colors">
                           {formatBroadcastName(d.driver_name)}
                         </div>
-                        <div className="text-[10px] text-slate-500 uppercase tracking-widest">
+                        <div className="text-[12px] text-slate-500 uppercase tracking-widest">
                           {d.team}
                         </div>
                       </div>
@@ -227,11 +227,11 @@ export default function Home() {
                   {/* Stats Detail */}
                   <div className="flex items-center gap-8">
                     <div className="hidden sm:block text-right">
-                      <div className="text-[10px] text-slate-500 uppercase tracking-wider">WINS</div>
+                      <div className="text-[12px] text-slate-500 uppercase tracking-wider">WINS</div>
                       <div className="text-xs font-bold text-slate-300">{d.wins || 0}</div>
                     </div>
                     <div className="text-right min-w-[70px]">
-                      <div className="text-[10px] text-slate-500 uppercase tracking-wider">POINTS</div>
+                      <div className="text-[12px] text-slate-500 uppercase tracking-wider">POINTS</div>
                       <div className="text-base font-black text-white italic tracking-wider">
                         {d.points}
                       </div>
@@ -248,7 +248,7 @@ export default function Home() {
         <div className="space-y-6">
           
           {/* QUICK COMPARE TOOL */}
-          <section className="bg-[#0d0f11] border border-[#22272c] p-4 relative">
+          <section className="bg-[#0d0f11] border border-[#22272c] p-4 relative" data-tour="compare">
             <div className="absolute top-0 left-0 h-full w-[3px] bg-[#ff1801]" />
             
             <div className="flex items-center gap-2 mb-4 border-b border-[#22272c] pb-2">
@@ -260,7 +260,7 @@ export default function Home() {
 
             <form onSubmit={handleCompareSubmit} className="space-y-4">
               <div>
-                <label className="block text-[10px] text-slate-400 uppercase tracking-widest font-broadcast mb-1.5">
+                <label className="block text-[12px] text-slate-400 uppercase tracking-widest font-broadcast mb-1.5">
                   Primary Driver (A)
                 </label>
                 <select
@@ -279,7 +279,7 @@ export default function Home() {
               </div>
 
               <div>
-                <label className="block text-[10px] text-slate-400 uppercase tracking-widest font-broadcast mb-1.5">
+                <label className="block text-[12px] text-slate-400 uppercase tracking-widest font-broadcast mb-1.5">
                   Comparison Driver (B)
                 </label>
                 <select
@@ -307,7 +307,7 @@ export default function Home() {
           </section>
 
           {/* CONSTRUCTOR STANDINGS */}
-          <section className="bg-[#0d0f11] border border-[#22272c] flex flex-col relative">
+          <section className="bg-[#0d0f11] border border-[#22272c] flex flex-col relative" data-tour="constructors">
             <div className="absolute top-0 left-0 h-[2px] w-full bg-[#ff1801]" />
             
             <div className="p-4 border-b border-[#22272c] bg-[#121518]">
@@ -337,7 +337,7 @@ export default function Home() {
                     
                     <div className="text-right">
                       <span className="text-sm font-black text-white italic tracking-wider font-broadcast">
-                        {c.points} <span className="text-[9px] text-slate-500 font-bold tracking-normal not-italic">PTS</span>
+                        {c.points} <span className="text-[11px] text-slate-500 font-bold tracking-normal not-italic">PTS</span>
                       </span>
                     </div>
                   </div>

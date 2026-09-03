@@ -2,121 +2,194 @@
 @tailwind components;
 @tailwind utilities;
 
+/* =====================================================================
+   RaceDelta design tokens — a pit-wall timing screen, not a marketing site.
+   Red    = live / primary action            (F1 red)
+   Purple = AI output ("fastest sector")     (timing-screen purple)
+   Yellow = caution / offline                (yellow flag)
+   Green  = gain / personal best
+   ===================================================================== */
 :root {
   --bg: #070809;
   --panel: #0d0f11;
   --panel-strong: #121518;
   --line: #22272c;
+  --line-strong: #3a4048;
   --text: #f4f4f5;
-  --muted: #a1a1aa;
-  --accent: #ff1801; /* F1 Neon Red */
+  --muted: #b4b7bf;
+  --dim: #8b8f98;
+  --accent: #ff1801;
+  --accent-dark: #d01300;
   --accent-2: #facc15;
+  --sector: #b26bff;
+  --sector-dim: rgba(178, 107, 255, 0.14);
+  --good: #22c55e;
+  --font-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+  --font-body: 'Titillium Web', ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
 
-html, body, #root {
-  height: 100%;
-}
+html { font-size: 17px; }
+html, body, #root { height: 100%; }
 
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: 'Titillium Web', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-family: var(--font-body);
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* F1 Broadcast Fonts */
-.font-broadcast {
-  font-family: 'Barlow Condensed', sans-serif;
+*:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
 
-.font-body {
-  font-family: 'Titillium Web', sans-serif;
-}
+/* ---------------------------------------------------------------- fonts */
+.font-broadcast { font-family: var(--font-display); }
+.font-body { font-family: var(--font-body); }
+.tabular { font-variant-numeric: tabular-nums; }
 
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 99px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
+/* ---------------------------------------------------------------- scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.3); }
 
-.container {
-  @apply max-w-7xl mx-auto px-4 sm:px-6;
-}
+.container { @apply max-w-7xl mx-auto px-4 sm:px-6; }
 
-.glass {
-  @apply bg-[#0d0f11] border border-[#22272c];
-}
-.glass-hover {
-  @apply transition-colors duration-150 hover:bg-[#121518] hover:border-[#333a42];
-}
+.glass { @apply bg-[#0d0f11] border border-[#22272c]; }
+.glass-hover { @apply transition-colors duration-150 hover:bg-[#121518] hover:border-[#333a42]; }
 
-/* F1 Broadcast Style Panels and Strips */
-.broadcast-panel {
-  background-color: #0d0f11;
-  border: 1px solid #22272c;
-  border-radius: 0px; /* Sharp corners like broadcast TV overlays */
-  position: relative;
-}
-
-.broadcast-panel::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 2px;
-  background-color: var(--accent);
-}
-
-.broadcast-heading {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-weight: 900;
-  text-transform: uppercase;
-  font-style: italic;
-  letter-spacing: 0.04em;
-  color: #ffffff;
-}
-
-.broadcast-label {
-  font-family: 'Barlow Condensed', sans-serif;
+/* ---------------------------------------------------------------- type scale */
+.eyebrow {
+  font-family: var(--font-display);
   font-weight: 700;
-  font-size: 11px;
+  font-size: 0.78rem;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  tracking: 0.15em;
-  color: #a1a1aa;
+  color: var(--muted);
 }
+.eyebrow-red { color: var(--accent); }
+.eyebrow-ai { color: var(--sector); }
 
-/* Timing Strip (Horizontal leaderboard bars) */
+.page-header {
+  display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between;
+  gap: 1rem; padding-bottom: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--line);
+}
+.page-title {
+  font-family: var(--font-display);
+  font-weight: 900; font-style: italic; text-transform: uppercase;
+  font-size: clamp(2.3rem, 4.2vw, 3.3rem); line-height: 0.95; letter-spacing: -0.01em;
+  color: #fff; margin-top: 0.25rem;
+}
+.page-title .dim { color: var(--dim); }
+.page-sub { color: var(--muted); font-size: 1.05rem; line-height: 1.5; max-width: 72ch; margin-top: 0.6rem; }
+.page-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+
+/* ---------------------------------------------------------------- panels */
+.panel {
+  background: var(--panel); border: 1px solid var(--line); position: relative;
+}
+.panel::before {
+  content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: var(--accent);
+}
+.panel-ai::before { background: var(--sector); }
+.panel-plain::before { display: none; }
+.panel-head {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;
+  padding: 0.85rem 1.1rem; border-bottom: 1px solid var(--line); background: var(--panel-strong);
+}
+.panel-title {
+  font-family: var(--font-display); font-weight: 900; font-style: italic; text-transform: uppercase;
+  font-size: 1.3rem; letter-spacing: 0.04em; color: #fff; line-height: 1.1;
+}
+.panel-subtitle { color: var(--muted); font-size: 0.92rem; margin-top: 0.15rem; }
+.panel-body { padding: 1.1rem; }
+
+/* ---------------------------------------------------------------- stat tiles */
+.stat-tile { background: var(--panel-strong); border: 1px solid var(--line); padding: 0.8rem 0.95rem; }
+.stat-label { font-family: var(--font-display); font-weight: 700; font-size: 0.74rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+.stat-value { font-family: var(--font-display); font-weight: 800; font-style: italic; font-size: 1.6rem; line-height: 1.1; color: #fff; margin-top: 0.15rem; font-variant-numeric: tabular-nums; }
+.stat-sub { color: var(--muted); font-size: 0.86rem; margin-top: 0.15rem; }
+
+/* ---------------------------------------------------------------- controls */
+.select-broadcast, .input-broadcast {
+  background: var(--panel-strong); border: 1px solid var(--line); color: var(--text);
+  font-family: var(--font-body); font-weight: 600; font-size: 0.95rem;
+  padding: 0.55rem 0.8rem; border-radius: 0; min-height: 2.6rem;
+}
+.select-broadcast:focus, .input-broadcast:focus { outline: none; border-color: var(--accent); }
+.input-broadcast::placeholder { color: var(--dim); font-weight: 400; }
+
+.btn-primary, .btn-ghost, .btn-ai {
+  font-family: var(--font-display); font-weight: 800; font-style: italic; text-transform: uppercase;
+  letter-spacing: 0.08em; font-size: 0.95rem; padding: 0.65rem 1.15rem; border-radius: 0;
+  display: inline-flex; align-items: center; gap: 0.5rem; transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-dark); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+.btn-ghost:hover { color: #fff; border-color: var(--line-strong); }
+.btn-ai { background: var(--sector); color: #120a1f; }
+.btn-ai:hover { filter: brightness(1.08); }
+
+.chip {
+  display: inline-flex; align-items: center; gap: 0.4rem; border: 1px solid var(--line); padding: 0.3rem 0.7rem;
+  font-family: var(--font-display); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
+}
+.chip-live { border-color: rgba(34, 197, 94, 0.4); color: var(--good); }
+.chip-warn { border-color: rgba(250, 204, 21, 0.4); color: var(--accent-2); }
+.chip-ai { border-color: rgba(178, 107, 255, 0.5); color: var(--sector); }
+.chip-button { cursor: pointer; }
+.chip-button:hover { border-color: var(--accent); color: #fff; }
+
+/* ---------------------------------------------------------------- timing rows / tables */
+.timing-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.timing-table th {
+  font-family: var(--font-display); font-weight: 700; font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--muted); text-align: left; padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--line); background: var(--panel-strong);
+}
+.timing-table td { padding: 0.65rem 0.75rem; border-bottom: 1px solid #1a1e22; font-size: 0.98rem; }
+.timing-table tr:hover td { background: var(--panel-strong); }
+.timing-table .num { text-align: right; }
+.timing-table .pos { font-family: var(--font-display); font-weight: 900; font-style: italic; font-size: 1.15rem; color: var(--accent); }
+
 .timing-strip {
-  display: flex;
-  align-items: center;
-  background-color: #0d0f11;
-  border-bottom: 1px solid #1a1e22;
-  transition: background-color 0.15s ease;
-  font-family: 'Barlow Condensed', sans-serif;
+  display: flex; align-items: center; background-color: var(--panel); border-bottom: 1px solid #1a1e22;
+  transition: background-color 0.15s ease; font-family: var(--font-display);
 }
+.timing-strip:hover { background-color: var(--panel-strong); }
 
-.timing-strip:hover {
-  background-color: #121518;
-}
+/* ---------------------------------------------------------------- legacy broadcast helpers (kept) */
+.broadcast-panel { background-color: var(--panel); border: 1px solid var(--line); border-radius: 0; position: relative; }
+.broadcast-panel::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px; background-color: var(--accent); }
+.broadcast-heading { font-family: var(--font-display); font-weight: 900; text-transform: uppercase; font-style: italic; letter-spacing: 0.04em; color: #ffffff; }
+.broadcast-label { font-family: var(--font-display); font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted); }
+.btn-broadcast { font-family: var(--font-display); font-weight: 800; text-transform: uppercase; font-style: italic; letter-spacing: 0.05em; transition: all 0.15s ease; border-radius: 0; }
 
-/* F1 Style Buttons */
-.btn-broadcast {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-weight: 800;
-  text-transform: uppercase;
-  font-style: italic;
-  letter-spacing: 0.05em;
-  transition: all 0.15s ease;
-  border-radius: 0;
+/* ---------------------------------------------------------------- AI accents */
+.ai-card { border: 1px solid rgba(178, 107, 255, 0.45); background: var(--sector-dim); }
+.ai-bar { background: var(--sector); }
+
+/* ---------------------------------------------------------------- guided tour (start-light gantry) */
+.tour-dim { position: fixed; inset: 0; background: rgba(3, 4, 5, 0.74); z-index: 999; }
+.tour-spot {
+  position: fixed; z-index: 999; pointer-events: none; border: 1px solid rgba(255, 24, 1, 0.75);
+  box-shadow: 0 0 0 9999px rgba(3, 4, 5, 0.74), 0 0 24px rgba(255, 24, 1, 0.25);
+  transition: top 0.25s ease, left 0.25s ease, width 0.25s ease, height 0.25s ease;
 }
+.tour-card {
+  position: fixed; z-index: 1000; background: var(--panel); border: 1px solid var(--line-strong);
+  padding: 1.1rem 1.2rem 1rem; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+}
+.tour-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: var(--accent); }
+.tour-top { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.6rem; }
+.tour-title { font-family: var(--font-display); font-weight: 900; font-style: italic; text-transform: uppercase; font-size: 1.45rem; line-height: 1.05; color: #fff; }
+.tour-body { color: var(--text); font-size: 1rem; line-height: 1.55; margin-top: 0.5rem; }
+.tour-actions { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-top: 1rem; }
+.tour-nav { display: flex; gap: 0.5rem; }
+.tour-lights { display: flex; gap: 6px; }
+.tour-light { width: 13px; height: 13px; border-radius: 50%; background: #23272e; border: 1px solid #3a4048; transition: background-color 0.2s ease, box-shadow 0.2s ease; }
+.tour-light.on { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 10px rgba(255, 24, 1, 0.75); }

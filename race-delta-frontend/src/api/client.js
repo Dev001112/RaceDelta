@@ -26,7 +26,8 @@ async function _parseErrorResponse(res) {
   try {
     const json = text ? JSON.parse(text) : null;
     if (json && typeof json === "object") {
-      return json.error || json.message || json.detail || JSON.stringify(json);
+      // message/detail carry the actual reason; error is only a generic title
+      return json.message || json.detail || json.error || JSON.stringify(json);
     }
     return `${res.status} ${res.statusText}`;
   } catch {
@@ -301,4 +302,26 @@ export function fetchAnalystStatus() {
 }
 export function postAnalystAsk(payload) {
   return safeFetch(`/api/analyst/ask`, { method: "POST", body: JSON.stringify(payload) });
+}
+
+/* --------------------------------------------------
+   COMPARE LAB — race / track / condition comparisons
+-------------------------------------------------- */
+export function fetchCompareRaces() {
+  return safeFetch(`/api/compare/races`);
+}
+export function fetchCompareOnRaces({ driver1, driver2, races }) {
+  const spec = races.map((r) => `${r.season}-${r.round}`).join(",");
+  return safeFetch(`/api/compare/drivers/races?driver1=${encodeURIComponent(driver1)}&driver2=${encodeURIComponent(driver2)}&races=${spec}`);
+}
+export function fetchCompareLaps({ driver1, driver2, season, round }) {
+  return safeFetch(`/api/compare/drivers/laps?driver1=${encodeURIComponent(driver1)}&driver2=${encodeURIComponent(driver2)}&season=${season}&round=${round}`);
+}
+export function fetchCompareVerdict({ driver1, driver2, races, context = "" }) {
+  const spec = races.map((r) => `${r.season}-${r.round}`).join(",");
+  return safeFetch(`/api/compare/verdict?driver1=${encodeURIComponent(driver1)}&driver2=${encodeURIComponent(driver2)}&races=${spec}&context=${encodeURIComponent(context)}`);
+}
+export function fetchTrackMap({ candidates }) {
+  const spec = candidates.map((r) => `${r.season}-${r.round}`).join(",");
+  return safeFetch(`/api/compare/track-map?rounds=${spec}`);
 }

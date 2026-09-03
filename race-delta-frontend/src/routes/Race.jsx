@@ -26,7 +26,7 @@ const formatDuration = (seconds, position, gap) => {
   if (gap === 0 || gap === "0") return "FINISHED";
   if (typeof gap === "number") return `+${gap.toFixed(3)}s`;
   if (String(gap).includes("Lap")) return gap;
-  return gap ? `+${gap}` : "FINISHED";
+  return gap ? (String(gap).startsWith("+") ? gap : `+${gap}`) : "FINISHED";
 };
 
 export default function Race() {
@@ -90,7 +90,8 @@ export default function Race() {
 
         // Find the "Race" session
         const raceSession = sessions.find(
-          (s) => (s.session_type || s.sessionType || "").toLowerCase() === "race" || (s.session_name || "").toLowerCase() === "race"
+          // session_type is "Race" for the Sprint too - only session_name distinguishes them
+          (s) => (s.session_name || "").toLowerCase() === "race"
         );
 
         if (!raceSession) {
@@ -193,7 +194,7 @@ export default function Race() {
       </div>
 
       {/* ================= BROADCAST HEADLINE PANEL ================= */}
-      <section className="bg-[#0d0f11] border border-[#22272c] p-6 relative overflow-hidden">
+      <section className="bg-[#0d0f11] border border-[#22272c] p-6 relative overflow-hidden" data-tour="race-header">
         <div className="absolute top-0 left-0 h-full w-[3px] bg-[#ff1801]" />
         
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -211,7 +212,7 @@ export default function Race() {
           </div>
 
           <div className="text-right hidden md:block">
-            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest font-broadcast">WINNER</span>
+            <span className="text-[12px] text-slate-500 font-bold uppercase tracking-widest font-broadcast">WINNER</span>
             <div className="text-3xl font-black italic text-[#ff1801] font-broadcast leading-none">
               {analytics?.results?.[0]?.driver_code || "N/A"}
             </div>
@@ -221,7 +222,7 @@ export default function Race() {
       </section>
 
       {/* ================= HORIZONTAL WEATHER/CONDITIONS STRIP ================= */}
-      <section className="bg-[#0d0f11] border border-[#22272c] p-4 relative font-broadcast">
+      <section className="bg-[#0d0f11] border border-[#22272c] p-4 relative font-broadcast" data-tour="race-weather">
         <div className="absolute top-0 left-0 h-full w-[3px] bg-[#ff1801]" />
         
         <div className="flex flex-wrap items-center justify-around gap-6 text-center">
@@ -230,7 +231,7 @@ export default function Race() {
               <Thermometer size={16} />
             </div>
             <div className="text-left">
-              <div className="text-[9px] text-slate-500 uppercase tracking-widest">AIR TEMP</div>
+              <div className="text-[11px] text-slate-500 uppercase tracking-widest">AIR TEMP</div>
               <div className="text-base font-black text-white italic">{analytics?.weather?.avg_air_temp}°C</div>
             </div>
           </div>
@@ -240,7 +241,7 @@ export default function Race() {
               <Thermometer size={16} />
             </div>
             <div className="text-left">
-              <div className="text-[9px] text-slate-500 uppercase tracking-widest">TRACK TEMP</div>
+              <div className="text-[11px] text-slate-500 uppercase tracking-widest">TRACK TEMP</div>
               <div className="text-base font-black text-white italic">{analytics?.weather?.avg_track_temp}°C</div>
             </div>
           </div>
@@ -250,7 +251,7 @@ export default function Race() {
               <Droplets size={16} />
             </div>
             <div className="text-left">
-              <div className="text-[9px] text-slate-500 uppercase tracking-widest">HUMIDITY</div>
+              <div className="text-[11px] text-slate-500 uppercase tracking-widest">HUMIDITY</div>
               <div className="text-base font-black text-white italic">{analytics?.weather?.avg_humidity}%</div>
             </div>
           </div>
@@ -260,7 +261,7 @@ export default function Race() {
               <Wind size={16} />
             </div>
             <div className="text-left">
-              <div className="text-[9px] text-slate-500 uppercase tracking-widest">TRACK CONDITION</div>
+              <div className="text-[11px] text-slate-500 uppercase tracking-widest">TRACK CONDITION</div>
               <div className="text-base font-black text-white italic">
                 {analytics?.weather?.rainfall ? "WET (RAIN)" : "DRY"}
               </div>
@@ -270,13 +271,13 @@ export default function Race() {
       </section>
 
       {/* ================= WINNER & BEST DRIVER CARDS ================= */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 font-broadcast">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 font-broadcast" data-tour="race-cards">
         {/* WINNER CARD */}
         {analytics?.winner && (
           <div className="bg-[#0d0f11] border border-[#22272c] p-4 flex items-center justify-between relative overflow-hidden">
             <div className="absolute top-0 left-0 h-full w-[3px] bg-[#ff1801]" />
             <div className="flex-1">
-              <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">RACE WINNER</span>
+              <span className="text-[12px] text-slate-500 uppercase tracking-widest font-bold">RACE WINNER</span>
               <h3 className="text-2xl font-black italic text-white uppercase mt-1">
                 {analytics.winner.driver_name}
               </h3>
@@ -310,7 +311,7 @@ export default function Race() {
           <div className="bg-[#0d0f11] border border-[#22272c] p-4 flex items-center justify-between relative overflow-hidden">
             <div className="absolute top-0 left-0 h-full w-[3px] bg-emerald-500" />
             <div className="flex-1">
-              <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold font-broadcast">BEST CLIMBER // DRIVER OF THE DAY</span>
+              <span className="text-[12px] text-slate-500 uppercase tracking-widest font-bold font-broadcast">BEST CLIMBER // DRIVER OF THE DAY</span>
               <h3 className="text-2xl font-black italic text-white uppercase mt-1">
                 {analytics.best_driver.driver_name}
               </h3>
@@ -344,14 +345,14 @@ export default function Race() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* POSITION CHART: 2/3 Width */}
-        <section className="lg:col-span-2 bg-[#0d0f11] border border-[#22272c] p-4 flex flex-col relative">
+        <section className="lg:col-span-2 bg-[#0d0f11] border border-[#22272c] p-4 flex flex-col relative" data-tour="position-chart">
           <div className="absolute top-0 left-0 h-[2px] w-full bg-[#ff1801]" />
           
           <div className="mb-4 border-b border-[#22272c] pb-2 flex justify-between items-center">
             <h2 className="text-base font-black uppercase italic tracking-wider text-white font-broadcast">
               Position Change Over Time // Lap Sample
             </h2>
-            <span className="text-[10px] font-bold text-slate-400 font-broadcast tracking-wider">
+            <span className="text-[12px] font-bold text-slate-400 font-broadcast tracking-wider">
               TOP 8 RUNNERS
             </span>
           </div>
@@ -405,7 +406,7 @@ export default function Race() {
         </section>
 
         {/* TEAM STRATEGY TIMELINE: 1/3 Width */}
-        <section className="bg-[#0d0f11] border border-[#22272c] p-4 flex flex-col relative">
+        <section className="bg-[#0d0f11] border border-[#22272c] p-4 flex flex-col relative" data-tour="stints">
           <div className="absolute top-0 left-0 h-[2px] w-full bg-[#ff1801]" />
           
           <div className="mb-4 border-b border-[#22272c] pb-2">
@@ -460,7 +461,7 @@ export default function Race() {
                 </div>
 
                 {/* Compounds key legend */}
-                <div className="flex justify-between items-center text-[9px] font-bold uppercase text-slate-500 border-t border-[#1e2329] pt-3 font-broadcast">
+                <div className="flex justify-between items-center text-[11px] font-bold uppercase text-slate-500 border-t border-[#1e2329] pt-3 font-broadcast">
                   <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-[#ff1801]" /> SOFT</div>
                   <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-[#facc15]" /> MED</div>
                   <div className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-[#f4f4f5]" /> HARD</div>
@@ -479,7 +480,7 @@ export default function Race() {
       </div>
 
       {/* ================= CLASSIFICATION RESULTS BOARD ================= */}
-      <section className="bg-[#0d0f11] border border-[#22272c] relative">
+      <section className="bg-[#0d0f11] border border-[#22272c] relative" data-tour="results">
         <div className="absolute top-0 left-0 h-[2px] w-full bg-[#ff1801]" />
         
         <div className="p-4 border-b border-[#22272c] bg-[#121518] flex items-center gap-2">
@@ -548,11 +549,11 @@ export default function Race() {
                       <div className="w-1.5 h-6" style={{ backgroundColor: teamColor }} />
                       <div>
                         <span className="font-bold text-white uppercase">{r.driver_name}</span>
-                        <span className="ml-2 px-1.5 py-0.5 bg-[#121518] border border-[#22272c] text-[10px] font-black text-slate-400">
+                        <span className="ml-2 px-1.5 py-0.5 bg-[#121518] border border-[#22272c] text-[12px] font-black text-slate-400">
                           {r.driver_code}
                         </span>
                         {r.is_fastest_lap && (
-                          <span className="ml-2 px-1.5 py-0.5 bg-purple-500/10 border border-purple-500/30 text-purple-400 text-[9px] font-black tracking-widest uppercase">
+                          <span className="ml-2 px-1.5 py-0.5 bg-purple-500/10 border border-purple-500/30 text-purple-400 text-[11px] font-black tracking-widest uppercase">
                             FASTEST LAP
                           </span>
                         )}

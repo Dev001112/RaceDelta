@@ -43,11 +43,11 @@ def compare_drivers_season(driver1: str, driver2: str, season: int):
     Returns the legacy keys (avg_lap_time / best_lap_time / laps) plus the full
     engineered feature vector for each driver under `features`.
     """
-    cache_key = f"compare_latest:v3:{season}:{driver1.upper()}:{driver2.upper()}"
-    cached = cache_store.get("derived", cache_key)
-    if cached is not None:
-        return cached
+    return cache_store.cached("derived", f"compare_latest:v3:{season}:{driver1.upper()}:{driver2.upper()}",
+                              cache_store.season_ttl(season), lambda: _build_comparison(driver1, driver2, season))
 
+
+def _build_comparison(driver1: str, driver2: str, season: int):
     round_num, event_name = get_latest_completed_round(season)
     if not round_num:
         raise RuntimeError("No completed race found")
@@ -69,5 +69,4 @@ def compare_drivers_season(driver1: str, driver2: str, season: int):
         "drivers": {driver1: block(a), driver2: block(b)},
         "source": "feature_store",
     }
-    cache_store.set("derived", cache_key, payload, DERIVED_CACHE_TTL)
     return payload

@@ -4,7 +4,11 @@ from dotenv import load_dotenv
 
 # Must run before the Config classes below call os.getenv(). create_app() also calls
 # load_dotenv(), but only after this module has already been imported.
-load_dotenv()
+#
+# override in dev: the Flask reloader re-execs into a child that inherits the parent's
+# environment, so without it an edited .env value is ignored until the server is killed
+# outright. In production the real environment must still win over a stray .env file.
+load_dotenv(override=os.getenv("FLASK_ENV", "development") != "production")
 
 class Config:
     """Base configuration"""
@@ -20,6 +24,9 @@ class Config:
     STANDINGS_MAX_RACES = int(os.getenv("STANDINGS_MAX_RACES", "10"))  # Limit races processed
     ENABLE_STANDINGS_CACHE = os.getenv("ENABLE_STANDINGS_CACHE", "true").lower() == "true"
     
+    # Browser-side caching of GET responses (seconds)
+    BROWSER_CACHE_MAX_AGE = int(os.getenv("BROWSER_CACHE_MAX_AGE", "300"))
+
     # Request timeouts
     REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", "30"))  # seconds
 

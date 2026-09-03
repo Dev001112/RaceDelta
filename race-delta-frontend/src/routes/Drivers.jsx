@@ -56,7 +56,7 @@ function DriverCard({ d, season }) {
             )}
           </div>
           {/* Driver Number Badge */}
-          <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-[#070809] flex items-center justify-center border border-[#22272c] text-[9px] font-black text-white italic font-broadcast">
+          <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-[#070809] flex items-center justify-center border border-[#22272c] text-[11px] font-black text-white italic font-broadcast">
             {d.number}
           </div>
         </div>
@@ -66,13 +66,13 @@ function DriverCard({ d, season }) {
           <h3 className="text-sm font-bold text-white uppercase tracking-wide group-hover:text-[#ff1801] transition-colors">
             {formatBroadcastName(d.name)}
           </h3>
-          <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5">{d.team}</p>
+          <p className="text-[12px] text-slate-500 uppercase tracking-widest mt-0.5">{d.team}</p>
         </div>
       </div>
 
       <div className="flex items-center gap-3">
         {d.country && (
-          <span className="hidden sm:inline text-[9px] font-bold text-slate-500 uppercase tracking-widest bg-white/5 border border-[#22272c] px-2 py-0.5 font-broadcast">
+          <span className="hidden sm:inline text-[11px] font-bold text-slate-500 uppercase tracking-widest bg-white/5 border border-[#22272c] px-2 py-0.5 font-broadcast">
             {d.country}
           </span>
         )}
@@ -153,7 +153,7 @@ export default function Drivers() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" data-tour="driver-grid">
         {drivers.map((d) => (
           <DriverCard key={d.code} d={d} season={season} />
         ))}

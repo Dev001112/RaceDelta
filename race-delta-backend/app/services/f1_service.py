@@ -148,8 +148,8 @@ PERSISTENT_CACHE_TTL = int(os.getenv("OPENF1_PERSISTENT_CACHE_TTL", "21600"))  #
 # Cache setup
 cache = TTLCache(maxsize=512, ttl=CACHE_TTL)
 
-# Cache ONLY cleaned drivers (10 minutes)
-driver_cache = TTLCache(maxsize=1, ttl=600)
+# Failed OpenF1 calls are not retried for a while (rate limits, outages)
+fail_cache = TTLCache(maxsize=512, ttl=int(os.getenv("OPENF1_FAIL_TTL", "120")))
 
 # Session with retry logic
 session = requests.Session()
@@ -185,118 +185,100 @@ def normalize_team(name: str) -> str:
     return TEAM_ALIASES.get(key, name)
 
 
-def _api_request(endpoint: str, params: Optional[Dict] = None, use_cache: bool = True) -> Any:
-    """Make request to OpenF1 API with caching"""
+def _fetch_openf1(url: str, params: Optional[Dict]) -> Any:
+    print(f"Fetching from OpenF1: {url} with params: {params}")
+    response = session.get(url, params=params, timeout=HTTP_TIMEOUT)   # retries with backoff on 429/5xx
+    response.raise_for_status()
+    return response.json()
+
+
+def _api_request(endpoint: str, params: Optional[Dict] = None, use_cache: bool = True, ttl: Optional[int] = None) -> Any:
+    """OpenF1 GET: in-memory layer, persistent stale-while-revalidate layer, negative cache for failures."""
     url = f"{OPENF1_BASE.rstrip('/')}/{endpoint.lstrip('/')}"
     normalized_params = dict(sorted((params or {}).items()))
     cache_key = f"{url}:{normalized_params}"
-    
-    if use_cache and cache_key in cache:
-        print(f"Cache hit for: {cache_key}")
-        return cache[cache_key]
 
-    if use_cache:
-        persisted = cache_store.get("openf1", cache_key)
-        if persisted is not None:
-            cache[cache_key] = persisted
-            print(f"Persistent cache hit for: {cache_key}")
-            return persisted
-    
+    if not use_cache:
+        try:
+            return _fetch_openf1(url, params)
+        except Exception as e:
+            print(f"OpenF1 API Error: {e}")
+            return None
+    if cache_key in cache:
+        return cache[cache_key]
+    if cache_key in fail_cache:
+        return None
     try:
-        print(f"Fetching from OpenF1: {url} with params: {params}")
-        response = session.get(url, params=params, timeout=HTTP_TIMEOUT)
-        response.raise_for_status()
-        data = response.json()
-        
-        print(f"Response status: {response.status_code}, Data length: {len(data) if isinstance(data, list) else 'N/A'}")
-        
-        if use_cache:
-            cache[cache_key] = data
-            cache_store.set("openf1", cache_key, data, PERSISTENT_CACHE_TTL)
-        
-        return data
-    except requests.RequestException as e:
-        print(f"OpenF1 API Error: {e}")
-        return None
+        data, fresh = cache_store.cached_entry("openf1", cache_key, ttl or PERSISTENT_CACHE_TTL,
+                                               lambda: _fetch_openf1(url, params))
     except Exception as e:
-        print(f"Unexpected error: {e}")
+        print(f"OpenF1 API Error: {e}")
+        fail_cache[cache_key] = True
         return None
+    if fresh:
+        cache[cache_key] = data   # stale values stay out of memory so the next call sees the refresh
+    return data
 
 
 #  DRIVERS ....
 
+def _build_roster(year: int) -> List[Dict]:
+    """Drivers who raced in the latest completed round of `year` (FastF1)."""
+    # Get season schedule
+    schedule = fastf1.get_event_schedule(year)
+
+    # Keep only completed races
+    completed = schedule[schedule["EventDate"] < datetime.utcnow()]
+
+    if completed.empty:
+        raise RuntimeError("No completed races found")
+
+    # Use latest completed race
+    latest_event = completed.iloc[-1]["EventName"]
+
+    session = fastf1.get_session(year, latest_event, "RACE")
+    session.load(laps=False, telemetry=False, weather=False, messages=False)
+
+    # Drivers who actually raced. Results are much lighter than loading all laps.
+    raced_numbers = set(str(n) for n in session.results["DriverNumber"].dropna().unique())
+
+    drivers = []
+
+    for drv in session.drivers:
+        info = session.get_driver(drv)
+
+        number = info.get("DriverNumber")
+        code = info.get("Abbreviation")
+        name = info.get("FullName")
+
+        if not number or not code or not name:
+            continue
+        if str(number) not in raced_numbers:
+            continue
+
+        drivers.append({
+            "driver_code": code,
+            "driver_name": name,
+            "driver_number": int(number),
+            "team": normalize_team(info.get("TeamName")),
+            "country_code": info.get("CountryCode"),
+            "headshot_url": info.get("HeadshotUrl"),
+        })
+
+    drivers.sort(key=lambda d: d["driver_number"])
+    return drivers
+
+
 def get_season_drivers(year: Optional[int] = None) -> Dict:
     """
-    Clean, race-only F1 drivers for a specific season.
-    Uses FastF1 as source of truth.
+    Clean, race-only F1 drivers for a season. Cached per season; finished seasons never expire.
     """
-    
-    # We might want to key the cache by year?
-    # For now, let's just clear cache or ignore cache if year != current?
-    # Or strict cache key.
     if year is None:
         year = datetime.now().year
-        
-    cache_key = f"drivers_{year}"
-    if cache_key in driver_cache:
-        return {
-            "source": "cache",
-            "drivers": driver_cache[cache_key]
-        }
-
     try:
-
-        # Get season schedule
-        schedule = fastf1.get_event_schedule(year)
-
-        # Keep only completed races
-        completed = schedule[schedule["EventDate"] < datetime.utcnow()]
-
-        if completed.empty:
-            raise RuntimeError("No completed races found")
-
-        # Use latest completed race
-        latest_event = completed.iloc[-1]["EventName"]
-
-        session = fastf1.get_session(year, latest_event, "RACE")
-        session.load(laps=False, telemetry=False, weather=False, messages=False)
-
-        # Drivers who actually raced. Results are much lighter than loading all laps.
-        raced_numbers = set(str(n) for n in session.results["DriverNumber"].dropna().unique())
-
-        drivers = []
-
-        for drv in session.drivers:
-            info = session.get_driver(drv)
-
-            number = info.get("DriverNumber")
-            code = info.get("Abbreviation")
-            name = info.get("FullName")
-
-            if not number or not code or not name:
-                continue
-            if str(number) not in raced_numbers:
-                continue
-
-            drivers.append({
-                "driver_code": code,
-                "driver_name": name,
-                "driver_number": int(number),
-                "team": normalize_team(info.get("TeamName")),
-                "country_code": info.get("CountryCode"),
-                "headshot_url": info.get("HeadshotUrl"),
-            })
-
-        drivers.sort(key=lambda d: d["driver_number"])
-
-        driver_cache[cache_key] = drivers
-
-        return {
-            "source": "fastf1",
-            "season": year,
-            "count": len(drivers),
-            "drivers": drivers
-        }
+        drivers = cache_store.cached("derived", f"roster:v1:{year}", cache_store.season_ttl(year),
+                                     lambda: _build_roster(year))
+        return {"source": "fastf1", "season": year, "count": len(drivers), "drivers": drivers}
 
     except Exception as e:
         # Silent fallback during offseason - not an error condition

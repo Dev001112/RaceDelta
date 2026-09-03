@@ -43,6 +43,7 @@ ERGAST_BASES = [
 CACHE_DIR = "./.cache"
 MAX_WORKERS = 5
 CACHE_TTL = 60 * 60 * 6  # 6 hours
+from app.services import cache_store
 
 cache = Cache(CACHE_DIR)
 
@@ -169,7 +170,7 @@ def build_driver_comparison_timeline(driver1, driver2, season):
             "rounds": [],
             "head_to_head": {driver1: 0, driver2: 0}
         }
-        cache.set(cache_key, output, expire=CACHE_TTL)
+        cache.set(cache_key, output, expire=cache_store.season_ttl(season, CACHE_TTL))
         return output
 
     # only completed races
@@ -231,5 +232,5 @@ def build_driver_comparison_timeline(driver1, driver2, season):
         "head_to_head": head_to_head
     }
 
-    cache.set(cache_key, output, expire=CACHE_TTL)
+    cache.set(cache_key, output, expire=cache_store.season_ttl(season, CACHE_TTL))
     return output

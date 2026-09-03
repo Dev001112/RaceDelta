@@ -40,7 +40,7 @@ function TeamCard({ team }) {
           <div className="text-white font-black uppercase text-base italic leading-tight group-hover:text-[#ff1801] transition-colors">
             {team.team_name}
           </div>
-          <div className="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5">
+          <div className="text-[12px] text-slate-500 uppercase tracking-widest mt-0.5">
             {team.nationality}
           </div>
         </div>
@@ -49,19 +49,19 @@ function TeamCard({ team }) {
       {/* Stats horizontal strip */}
       <div className="grid grid-cols-3 gap-2 border-t border-[#1e2329] pt-3 mt-3 font-broadcast text-center">
         <div>
-          <div className="text-[9px] text-slate-500 uppercase tracking-wider">POS</div>
+          <div className="text-[11px] text-slate-500 uppercase tracking-wider">POS</div>
           <div className="text-sm font-black italic text-white">
             {team.position < 10 ? `0${team.position}` : team.position}
           </div>
         </div>
         
         <div>
-          <div className="text-[9px] text-slate-500 uppercase tracking-wider">PTS</div>
+          <div className="text-[11px] text-slate-500 uppercase tracking-wider">PTS</div>
           <div className="text-sm font-black italic text-white">{team.points}</div>
         </div>
 
         <div>
-          <div className="text-[9px] text-slate-500 uppercase tracking-wider">WINS</div>
+          <div className="text-[11px] text-slate-500 uppercase tracking-wider">WINS</div>
           <div className="text-sm font-black italic text-[#ff1801]">{team.wins}</div>
         </div>
       </div>
