@@ -226,7 +226,30 @@ def rating_for_season(season: int) -> dict:
     return _cached(["ai_rating:v1", season], build)
 
 
+def resolve_driver_code(season: int, text: str) -> str:
+    """'ANT', 'Antonelli', 'Kimi Antonelli' -> 'ANT'.
+
+    The analyst LLM passes whatever the user typed, usually a surname, while the feature store
+    keys on the three-letter code. Falls back to the input so an unknown driver still 404s
+    with a sensible message instead of silently resolving to somebody else.
+    """
+    t = (text or "").strip()
+    if len(t) == 3 and t.isalpha():
+        return t.upper()          # already a code; skip the DB round-trip
+    _, meta = load_season_frame(season)
+    if t.upper() in meta:
+        return t.upper()
+    tl = t.lower()
+    for code, m in meta.items():
+        name = (m.get("name") or "").lower()
+        if name and (tl == name or tl in name.split() or tl in name):
+            return code
+    return t.upper()
+
+
 def dna_for_season(season: int, driver_code: str, k: int = 5) -> dict:
+    driver_code = resolve_driver_code(season, driver_code)
+
     def build():
         df, meta = load_season_frame(season)
         vec, races = matrix_from_frame(df)

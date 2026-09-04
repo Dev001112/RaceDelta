@@ -355,7 +355,7 @@ TOOLS = [
     {"name": "get_driver_rating", "description": "Season-long AI Driver Rating (0-100) with component scores, ranked. Use for 'who is the best driver' style questions.",
      "input_schema": {"type": "object", "properties": {"season": {"type": "integer"}, "top": {"type": "integer", "description": "How many drivers to return"}}, "required": ["season", "top"], "additionalProperties": False}},
     {"name": "get_driver_dna", "description": "A driver's season DNA vector (relative strengths) and the most similar drivers.",
-     "input_schema": {"type": "object", "properties": {"season": {"type": "integer"}, "driver": {"type": "string"}}, "required": ["season", "driver"], "additionalProperties": False}},
+     "input_schema": {"type": "object", "properties": {"season": {"type": "integer"}, "driver": {"type": "string", "description": "Three-letter code (VER, ANT) or the driver's name; both resolve."}}, "required": ["season", "driver"], "additionalProperties": False}},
 ]
 for _t in TOOLS:
     _t["strict"] = True

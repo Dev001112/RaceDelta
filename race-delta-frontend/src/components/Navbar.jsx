@@ -25,9 +25,7 @@ export default function Navbar() {
       <div className="container">
         <nav className="flex h-16 items-center justify-between gap-4">
           <Link to="/" className="flex items-center gap-3 min-w-fit">
-            <div className="h-9 w-9 bg-f1 text-white grid place-items-center font-black italic text-lg font-broadcast">
-              RD
-            </div>
+            <img src="/logo.png" alt="RaceDelta" className="h-9 w-9 object-contain" />
             <div className="leading-none font-broadcast">
               <div className="text-white font-black uppercase tracking-[0.08em] text-base italic">
                 RaceDelta
