@@ -48,11 +48,22 @@ def compare_drivers_season(driver1: str, driver2: str, season: int):
 
 
 def _build_comparison(driver1: str, driver2: str, season: int):
-    round_num, event_name = get_latest_completed_round(season)
-    if not round_num:
+    completed = _completed_events(season)
+    if completed.empty:
         raise RuntimeError("No completed race found")
 
-    ensure_race_features(season, round_num)
+    # The newest round has laps within hours of the flag but its classification can lag; use the
+    # latest round that can actually be ingested.
+    error = None
+    for _, ev in completed.iloc[::-1].head(2).iterrows():
+        round_num, event_name = int(ev["RoundNumber"]), str(ev["EventName"])
+        try:
+            ensure_race_features(season, round_num)
+            break
+        except Exception as e:  # ResultsPending or a FastF1 hiccup: step back one round
+            error = e
+    else:
+        raise RuntimeError(f"Latest races could not be ingested: {error}")
     rows = {r["driver_code"]: r for r in features_for_race(season, round_num)}
     a, b = rows.get(driver1.upper()), rows.get(driver2.upper())
     if not a or not b:

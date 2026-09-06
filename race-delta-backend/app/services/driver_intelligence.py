@@ -21,7 +21,8 @@ from sklearn.decomposition import PCA
 from sklearn.metrics.pairwise import cosine_similarity, euclidean_distances
 from sklearn.preprocessing import StandardScaler
 
-from models import Constructor, Driver, DriverRaceFeature
+from models import db, Constructor, Driver, DriverRaceFeature
+from sqlalchemy import func
 from app.services import cache_store
 
 CACHE_TTL = 3600
@@ -205,8 +206,9 @@ def load_season_frame(season: int):
 
 def _cached(key_parts, build):
     season = key_parts[1]
-    n_rows = DriverRaceFeature.query.filter_by(season=season).count()
-    key = ":".join(str(p) for p in key_parts) + f":rows={n_rows}"
+    n_rows, latest = (db.session.query(func.count(DriverRaceFeature.id), func.max(DriverRaceFeature.computed_at))
+                      .filter(DriverRaceFeature.season == season).first())
+    key = ":".join(str(p) for p in key_parts) + f":rows={n_rows}:at={latest.isoformat() if latest else 0}"
     return cache_store.cached("derived", key, cache_store.LONG_TTL, build)
 
 

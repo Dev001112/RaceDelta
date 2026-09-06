@@ -121,7 +121,8 @@ def race_summary(ctx: sl.RaceContext) -> dict:
             "compounds": ctx.compounds, "fastest_lap": {"driver_code": best[0], "lap_time_s": best[1]} if best else None,
             "classification": classification}
     top = classification[:3]
-    podium = ", ".join(f"{_pos(r['position'])} {r['driver_code']} ({r['team']}, {r['strategy'] or '?'})" for r in top)
+    podium = (", ".join(f"{_pos(r['position'])} {r['driver_code']} ({r['team']}, {r['strategy'] or '?'})" for r in top)
+              if any(r["position"] is not None for r in top) else "classification not published yet")
     sc = data["safety_car_laps"]
     summary = (f"{ctx.event} ({ctx.season} R{ctx.round}), {ctx.total_laps} laps, {'wet' if ctx.rainfall else 'dry'}. "
                f"Podium: {podium}. Pit loss about {ctx.pit_loss_s:.0f}s; "

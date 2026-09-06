@@ -32,6 +32,23 @@ def _s(value):
     return str(value)
 
 
+class ResultsPending(RuntimeError):
+    """FastF1 has laps for the race but no finishing positions yet (results land a few hours after the flag)."""
+
+
+def classification_published(results) -> bool:
+    """True once the official classification is in: some driver has a numeric ClassifiedPosition.
+    (FastF1 fills `Position` from the timing order within minutes; ClassifiedPosition and Status,
+    which the feature store relies on, arrive with the official results hours later.)"""
+    try:
+        if results is None or len(results) == 0:
+            return False
+        classified = results["ClassifiedPosition"].astype(str).str.strip()
+        return bool(classified.str.fullmatch(r"\d+").any())
+    except (KeyError, TypeError, AttributeError):
+        return False
+
+
 class DataIngestor:
     """Ingests F1 data from FastF1 into the local Postgres database."""
 
@@ -170,6 +187,9 @@ class DataIngestor:
             weather = fe.weather_summary(getattr(session, "weather_data", None))
             gaps = fe.compute_gaps(laps)
             results = session.results
+            if not classification_published(results):
+                raise ResultsPending(f"{session.event['EventName']} {year}: the official classification is not "
+                                     f"published yet, so this race cannot be ingested. Try again in a few hours.")
             try:
                 rcm = session.race_control_messages
             except Exception:
